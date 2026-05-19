@@ -25,6 +25,7 @@
             gap: 2px;
             margin-bottom: 20px;
             position: relative;
+            direction: ltr; /* הגדרת כיוון המערך משמאל לימין */
         }
 
         .cell {
@@ -38,7 +39,7 @@
             font-weight: bold;
             background-color: #fff;
             transition: opacity 0.3s;
-            flex-shrink: 0; /* מונע מהתאים להתכווץ ולייצר סטייה במיקום החץ */
+            flex-shrink: 0;
         }
 
         .cell.grayed {
@@ -76,7 +77,7 @@
             color: #dc3545;
             transition: left 0.3s ease;
             font-weight: bold;
-            transform: translateX(-50%); /* מרכוז החץ ביחס לאמצע התא */
+            transform: translateX(-50%);
         }
 
         /* אלמנט הריחוף באנימציה */
@@ -134,27 +135,24 @@
     </div>
 
     <script>
-        const ARRAY_SIZE = 20; // גודל המערך עודכן ל-20
+        const ARRAY_SIZE = 20;
         let originalData = [];
         let auxCounts = [0, 0, 0, 0];
         
-        // משתני ניהול מצב
-        let phase = 1; // 1: העתקה לעזר, 2: העתקה לסופי, 3: סיום
+        let phase = 1; 
         let origIndex = 0;
         let finalIndex = 0;
         let auxReadRow = 0;
         let auxReadCol = 0;
         let isAnimating = false;
 
-        // אתחול המערכים בתצוגה
         function init() {
             const origContainer = document.getElementById('original-array');
             const auxContainer = document.getElementById('aux-arrays-container');
             const finalContainer = document.getElementById('final-array');
 
-            // יצירת המערך המקורי
             for (let i = 0; i < ARRAY_SIZE; i++) {
-                const val = Math.floor(Math.random() * 99) + 1; // מספרים 1-99
+                const val = Math.floor(Math.random() * 99) + 1;
                 originalData.push(val);
                 
                 const cell = document.createElement('div');
@@ -163,19 +161,16 @@
                 cell.innerText = val;
                 origContainer.appendChild(cell);
 
-                // יצירת תאים ריקים במערך הסופי
                 const finalCell = document.createElement('div');
                 finalCell.className = 'cell';
                 finalCell.id = `final-${i}`;
                 finalContainer.appendChild(finalCell);
             }
 
-            // יצירת ארבעת מערכי העזר
             for (let mod = 0; mod < 4; mod++) {
                 const row = document.createElement('div');
                 row.className = 'aux-row';
 
-                // מונה מימין
                 const counterWrapper = document.createElement('div');
                 counterWrapper.innerHTML = `<span class="counter-label">Mod ${mod}:</span> <span class="counter-box" id="counter-${mod}">0</span>`;
                 row.appendChild(counterWrapper);
@@ -195,11 +190,9 @@
                 auxContainer.appendChild(row);
             }
 
-            // מיקום החץ על התא הראשון
             updateArrowPosition(0);
         }
 
-        // עדכון מיקום החץ מתחת למערך המקורי
         function updateArrowPosition(index) {
             if (index >= ARRAY_SIZE) {
                 document.getElementById('arrow').style.display = 'none';
@@ -208,12 +201,10 @@
             const targetCell = document.getElementById(`orig-${index}`);
             const arrow = document.getElementById('arrow');
             
-            // חישוב המרכז המדויק של התא
             const centerLeft = targetCell.offsetLeft + (targetCell.offsetWidth / 2);
             arrow.style.left = centerLeft + 'px';
         }
 
-        // פונקציית האנימציה - מעיפה אלמנט מנקודה א' לנקודה ב'
         function flyValue(value, startElement, endElement, callback) {
             isAnimating = true;
             
@@ -224,30 +215,25 @@
             const startRect = startElement.getBoundingClientRect();
             const endRect = endElement.getBoundingClientRect();
 
-            // מיקום התחלתי
             flyer.style.left = startRect.left + 'px';
             flyer.style.top = startRect.top + 'px';
             document.body.appendChild(flyer);
 
-            // יצירת רענון לדפדפן כדי שהאנימציה תעבוד
             flyer.offsetWidth;
 
-            // מיקום סופי
             flyer.style.left = endRect.left + 'px';
             flyer.style.top = endRect.top + 'px';
 
             setTimeout(() => {
                 flyer.remove();
                 callback();
-            }, 500); // משך האנימציה
+            }, 500);
         }
 
-        // ביצוע צעד בהתאם לשלב הנוכחי
         function nextStep() {
-            if (isAnimating) return; // מניעת התנגשויות
+            if (isAnimating) return;
 
             if (phase === 1) {
-                // שלב 1: מהמקור למערכי עזר
                 if (origIndex < ARRAY_SIZE) {
                     const val = originalData[origIndex];
                     const mod = val % 4;
@@ -258,7 +244,7 @@
 
                     flyValue(val, startCell, endCell, () => {
                         endCell.innerText = val;
-                        startCell.classList.add('grayed'); // סימון שהערך הועתק
+                        startCell.classList.add('grayed');
                         
                         auxCounts[mod]++;
                         document.getElementById(`counter-${mod}`).innerText = auxCounts[mod];
@@ -267,7 +253,6 @@
                         if (origIndex < ARRAY_SIZE) {
                             updateArrowPosition(origIndex);
                         } else {
-                            // סיימנו את המעבר על המערך המקורי
                             document.getElementById('final-section').style.display = 'flex';
                             phase = 2;
                         }
@@ -275,7 +260,6 @@
                     });
                 }
             } else if (phase === 2) {
-                // שלב 2: ממערכי העזר למערך הסופי
                 while (auxReadRow < 4 && auxReadCol >= auxCounts[auxReadRow]) {
                     auxReadRow++;
                     auxReadCol = 0;
@@ -288,27 +272,25 @@
 
                     flyValue(val, startCell, endCell, () => {
                         endCell.innerText = val;
-                        startCell.classList.add('grayed'); // סימון שהערך נלקח
+                        startCell.classList.add('grayed');
                         
                         finalIndex++;
                         auxReadCol++;
                         isAnimating = false;
                     });
                 } else {
-                    phase = 3; // סיימנו הכל
+                    phase = 3;
                 }
             }
         }
 
-        // האזנה למקש Enter
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault(); // מניעת גלילת מסך בטעות
+                e.preventDefault();
                 nextStep();
             }
         });
 
-        // הפעלת האתחול בטעינת העמוד
         window.onload = init;
     </script>
 </body>
