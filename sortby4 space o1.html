@@ -43,7 +43,6 @@
             border-radius: 5px;
             display: inline-block;
         }
-        /* הגדרת כיוון משמאל לימין במיוחד עבור המערך */
         #array-container {
             direction: ltr; 
             display: flex;
@@ -66,10 +65,8 @@
             justify-content: flex-end;
             position: relative;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            /* מעבר חלק במקרה של שינוי רגיל */
             transition: background-color 0.3s, border-color 0.3s;
         }
-        /* מחלקה לאנימציית הריחוף של ההחלפה */
         .floating {
             z-index: 100;
             box-shadow: 0 15px 25px rgba(0,0,0,0.4);
@@ -129,17 +126,17 @@
     <div id="status"></div>
 
     <script>
-        const ARRAY_SIZE = 40;
+        const ARRAY_SIZE = 20;
         let arr = [];
         for (let k = 0; k < ARRAY_SIZE; k++) {
             arr.push(Math.floor(Math.random() * 99) + 1);
         }
 
-        let i = 0; // ערך השארית ירוץ מ-0 עד 2
-        let X = 0; // אינדקס ההחלפה
-        let j = 0; // המצביע הנוכחי
-        let isDone = false; // דגל סיום
-        let isAnimating = false; // דגל למניעת התקדמות בזמן אנימציה
+        let i = 0; 
+        let X = 0; 
+        let j = 0; 
+        let isDone = false; 
+        let isAnimating = false; 
 
         function render() {
             const container = document.getElementById('array-container');
@@ -179,7 +176,6 @@
             if (isDone) {
                 document.getElementById('status').textContent = "המיון הסתיים בהצלחה!";
                 
-                // הפיכת כל שאר התאים (שארית 3) לירוקים גם כן
                 const allCells = document.querySelectorAll('.cell');
                 allCells.forEach(c => c.classList.add('sorted'));
             }
@@ -187,10 +183,9 @@
 
         function checkPassEnd() {
             if (j >= arr.length) {
-                i++; // מעבר לשארית הבאה
-                j = X; // תחילת מעבר מהמיקום X
+                i++; 
+                j = X; 
                 
-                // כעת מספיק לרוץ עבור i=0, 1, 2. ברגע ש-i עובר את 2 - סיימנו.
                 if (i > 2) {
                     isDone = true;
                     j = -1; 
@@ -202,7 +197,6 @@
             const cell1 = document.getElementById('cell-' + idx1);
             const cell2 = document.getElementById('cell-' + idx2);
 
-            // חישוב המיקומים במסך
             const rect1 = cell1.getBoundingClientRect();
             const rect2 = cell2.getBoundingClientRect();
 
@@ -212,18 +206,15 @@
             const deltaX2 = rect1.left - rect2.left;
             const deltaY2 = rect1.top - rect2.top;
 
-            // החלת אנימציית הריחוף
             cell1.style.transition = 'transform 0.5s ease-in-out, box-shadow 0.2s';
             cell2.style.transition = 'transform 0.5s ease-in-out, box-shadow 0.2s';
             
             cell1.classList.add('floating');
             cell2.classList.add('floating');
 
-            // ביצוע התזוזה בפועל
             cell1.style.transform = `translate(${deltaX1}px, ${deltaY1}px)`;
             cell2.style.transform = `translate(${deltaX2}px, ${deltaY2}px)`;
 
-            // המתנה לסיום האנימציה, עדכון הלוגיקה והרינדור מחדש
             setTimeout(() => {
                 callback();
             }, 550);
@@ -232,9 +223,7 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !isDone && !isAnimating) {
                 
-                // בדיקת תנאי המודולו
                 if (arr[j] % 4 === i) {
-                    // אם j שווה ל-X, אין טעם לבצע אנימציית החלפה (הוא מחליף עם עצמו)
                     if (j === X) {
                         X++;
                         j++;
@@ -243,7 +232,6 @@
                     } else {
                         isAnimating = true;
                         animateSwap(X, j, () => {
-                            // ביצוע ההחלפה במערך עצמו בסיום האנימציה
                             let temp = arr[j];
                             arr[j] = arr[X];
                             arr[X] = temp;
@@ -256,7 +244,6 @@
                         });
                     }
                 } else {
-                    // התנאי לא מתקיים - פשוט מתקדמים עם j
                     j++;
                     checkPassEnd();
                     render();
@@ -264,7 +251,6 @@
             }
         });
 
-        // קריאה ראשונית לציור המסך
         render();
     </script>
 </body>
