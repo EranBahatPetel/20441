@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>הדגמת מיון Mod 4</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: auto;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .array-container {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .cell {
+            width: 25px;
+            height: 25px;
+            border: 2px solid #555;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #fff;
+            transition: opacity 0.3s;
+            flex-shrink: 0; /* מונע מהתאים להתכווץ ולייצר סטייה במיקום החץ */
+        }
+
+        .cell.grayed {
+            opacity: 0.3;
+        }
+
+        .aux-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .counter-box {
+            font-size: 16px;
+            font-weight: bold;
+            background-color: #e9ecef;
+            border: 2px solid #adb5bd;
+            border-radius: 5px;
+            padding: 5px 15px;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .counter-label {
+            margin-left: 5px;
+            font-weight: bold;
+        }
+
+        /* חץ ההצבעה */
+        #arrow {
+            position: absolute;
+            bottom: -20px;
+            font-size: 20px;
+            color: #dc3545;
+            transition: left 0.3s ease;
+            font-weight: bold;
+            transform: translateX(-50%); /* מרכוז החץ ביחס לאמצע התא */
+        }
+
+        /* אלמנט הריחוף באנימציה */
+        .flyer {
+            position: fixed;
+            width: 25px;
+            height: 25px;
+            border: 2px solid #007bff;
+            background-color: #cce5ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 1000;
+            transition: left 0.5s ease-in-out, top 0.5s ease-in-out;
+            pointer-events: none;
+        }
+
+        #final-section {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px dashed #ccc;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>הדגמת מיון - Mod 4</h1>
+    <div class="instructions">לחץ על מקש <b>Enter</b> כדי לבצע את הצעד הבא.</div>
+
+    <h2>המערך המקורי</h2>
+    <div class="array-container" id="original-array">
+        <div id="arrow">↑</div>
+    </div>
+
+    <h2>מערכי עזר (Mod 4)</h2>
+    <div id="aux-arrays-container"></div>
+
+    <div id="final-section">
+        <h2>המערך החדש (הסופי)</h2>
+        <div class="array-container" id="final-array"></div>
+    </div>
+
+    <script>
+        const ARRAY_SIZE = 20; // גודל המערך עודכן ל-20
+        let originalData = [];
+        let auxCounts = [0, 0, 0, 0];
+        
+        // משתני ניהול מצב
+        let phase = 1; // 1: העתקה לעזר, 2: העתקה לסופי, 3: סיום
+        let origIndex = 0;
+        let finalIndex = 0;
+        let auxReadRow = 0;
+        let auxReadCol = 0;
+        let isAnimating = false;
+
+        // אתחול המערכים בתצוגה
+        function init() {
+            const origContainer = document.getElementById('original-array');
+            const auxContainer = document.getElementById('aux-arrays-container');
+            const finalContainer = document.getElementById('final-array');
+
+            // יצירת המערך המקורי
+            for (let i = 0; i < ARRAY_SIZE; i++) {
+                const val = Math.floor(Math.random() * 99) + 1; // מספרים 1-99
+                originalData.push(val);
+                
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `orig-${i}`;
+                cell.innerText = val;
+                origContainer.appendChild(cell);
+
+                // יצירת תאים ריקים במערך הסופי
+                const finalCell = document.createElement('div');
+                finalCell.className = 'cell';
+                finalCell.id = `final-${i}`;
+                finalContainer.appendChild(finalCell);
+            }
+
+            // יצירת ארבעת מערכי העזר
+            for (let mod = 0; mod < 4; mod++) {
+                const row = document.createElement('div');
+                row.className = 'aux-row';
+
+                // מונה מימין
+                const counterWrapper = document.createElement('div');
+                counterWrapper.innerHTML = `<span class="counter-label">Mod ${mod}:</span> <span class="counter-box" id="counter-${mod}">0</span>`;
+                row.appendChild(counterWrapper);
+
+                const arrayDiv = document.createElement('div');
+                arrayDiv.className = 'array-container';
+                arrayDiv.style.marginBottom = '0';
+
+                for (let i = 0; i < ARRAY_SIZE; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `aux-${mod}-${i}`;
+                    arrayDiv.appendChild(cell);
+                }
+
+                row.appendChild(arrayDiv);
+                auxContainer.appendChild(row);
+            }
+
+            // מיקום החץ על התא הראשון
+            updateArrowPosition(0);
+        }
+
+        // עדכון מיקום החץ מתחת למערך המקורי
+        function updateArrowPosition(index) {
+            if (index >= ARRAY_SIZE) {
+                document.getElementById('arrow').style.display = 'none';
+                return;
+            }
+            const targetCell = document.getElementById(`orig-${index}`);
+            const arrow = document.getElementById('arrow');
+            
+            // חישוב המרכז המדויק של התא
+            const centerLeft = targetCell.offsetLeft + (targetCell.offsetWidth / 2);
+            arrow.style.left = centerLeft + 'px';
+        }
+
+        // פונקציית האנימציה - מעיפה אלמנט מנקודה א' לנקודה ב'
+        function flyValue(value, startElement, endElement, callback) {
+            isAnimating = true;
+            
+            const flyer = document.createElement('div');
+            flyer.className = 'flyer';
+            flyer.innerText = value;
+            
+            const startRect = startElement.getBoundingClientRect();
+            const endRect = endElement.getBoundingClientRect();
+
+            // מיקום התחלתי
+            flyer.style.left = startRect.left + 'px';
+            flyer.style.top = startRect.top + 'px';
+            document.body.appendChild(flyer);
+
+            // יצירת רענון לדפדפן כדי שהאנימציה תעבוד
+            flyer.offsetWidth;
+
+            // מיקום סופי
+            flyer.style.left = endRect.left + 'px';
+            flyer.style.top = endRect.top + 'px';
+
+            setTimeout(() => {
+                flyer.remove();
+                callback();
+            }, 500); // משך האנימציה
+        }
+
+        // ביצוע צעד בהתאם לשלב הנוכחי
+        function nextStep() {
+            if (isAnimating) return; // מניעת התנגשויות
+
+            if (phase === 1) {
+                // שלב 1: מהמקור למערכי עזר
+                if (origIndex < ARRAY_SIZE) {
+                    const val = originalData[origIndex];
+                    const mod = val % 4;
+                    const auxIndex = auxCounts[mod];
+                    
+                    const startCell = document.getElementById(`orig-${origIndex}`);
+                    const endCell = document.getElementById(`aux-${mod}-${auxIndex}`);
+
+                    flyValue(val, startCell, endCell, () => {
+                        endCell.innerText = val;
+                        startCell.classList.add('grayed'); // סימון שהערך הועתק
+                        
+                        auxCounts[mod]++;
+                        document.getElementById(`counter-${mod}`).innerText = auxCounts[mod];
+                        
+                        origIndex++;
+                        if (origIndex < ARRAY_SIZE) {
+                            updateArrowPosition(origIndex);
+                        } else {
+                            // סיימנו את המעבר על המערך המקורי
+                            document.getElementById('final-section').style.display = 'flex';
+                            phase = 2;
+                        }
+                        isAnimating = false;
+                    });
+                }
+            } else if (phase === 2) {
+                // שלב 2: ממערכי העזר למערך הסופי
+                while (auxReadRow < 4 && auxReadCol >= auxCounts[auxReadRow]) {
+                    auxReadRow++;
+                    auxReadCol = 0;
+                }
+
+                if (auxReadRow < 4) {
+                    const startCell = document.getElementById(`aux-${auxReadRow}-${auxReadCol}`);
+                    const val = startCell.innerText;
+                    const endCell = document.getElementById(`final-${finalIndex}`);
+
+                    flyValue(val, startCell, endCell, () => {
+                        endCell.innerText = val;
+                        startCell.classList.add('grayed'); // סימון שהערך נלקח
+                        
+                        finalIndex++;
+                        auxReadCol++;
+                        isAnimating = false;
+                    });
+                } else {
+                    phase = 3; // סיימנו הכל
+                }
+            }
+        }
+
+        // האזנה למקש Enter
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // מניעת גלילת מסך בטעות
+                nextStep();
+            }
+        });
+
+        // הפעלת האתחול בטעינת העמוד
+        window.onload = init;
+    </script>
+</body>
+</html>
