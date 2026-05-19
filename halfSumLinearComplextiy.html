@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>אלגוריתם לינארי - מעבר משמאל לימין</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .instructions {
+            color: #555;
+            font-size: 18px;
+            margin-bottom: 30px;
+            background-color: #e8f4f8;
+            padding: 10px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        #phase-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 20px;
+        }
+
+        /* הגדרת כיוון שמאל לימין עבור אזור המערך והסכום */
+        .main-container {
+            display: flex;
+            direction: ltr; /* המערך משמאל, הסכום מימין */
+            justify-content: center;
+            align-items: flex-end;
+            gap: 40px;
+            margin-top: 20px;
+        }
+
+        #total-sum-container {
+            background-color: #fff;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            direction: rtl; /* טקסט הסכום יישאר בעברית תקינה */
+        }
+
+        #total-sum-label {
+            font-size: 22px;
+            color: #333;
+        }
+
+        #total-sum-value {
+            font-size: 40px;
+            font-weight: bold;
+            color: #e74c3c;
+            display: block;
+            margin-top: 10px;
+        }
+
+        #array-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            direction: ltr; /* איברי המערך משמאל לימין (אינדקס 0 בשמאל) */
+        }
+
+        .element-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .arrow-slot {
+            height: 40px;
+            font-size: 35px;
+            color: #e74c3c;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .array-box {
+            width: 70px;
+            height: 70px;
+            background-color: #fff;
+            border: 3px solid #34495e;
+            border-radius: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        .highlight-total { background-color: #f1c40f !important; transform: scale(1.1); }
+
+        /* ניהול היסטוריית החישובים בגלילה */
+        #calculations-log {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-top: 40px;
+            min-height: 240px;
+        }
+
+        .calc-row {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            width: 100%;
+            transition: all 0.4s ease;
+        }
+
+        .calc-box {
+            background-color: #fff;
+            border: 2px solid #95a5a6;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            min-width: 340px;
+            box-sizing: border-box;
+            text-align: right;
+        }
+
+        /* עיצוב השורה הישנה (העליונה) */
+        .old-row .calc-box {
+            opacity: 0.55;
+            transform: scale(0.95);
+            border-color: #bdc3c7;
+            background-color: #f9f9f9;
+        }
+
+        /* עיצוב השורה החדשה (התחתונה) */
+        .new-row .calc-box {
+            border-color: #2980b9;
+            box-shadow: 0 4px 10px rgba(41, 128, 185, 0.15);
+            animation: slideUp 0.4s ease-out forwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #message-container {
+            margin-top: 25px;
+            font-size: 28px;
+            font-weight: bold;
+            min-height: 50px;
+            padding: 10px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .success-msg { 
+            color: #27ae60; 
+            background-color: #e8f8f5;
+            padding: 10px 20px;
+            border: 2px solid #2ecc71;
+        }
+        .error-msg { 
+            color: #c0392b; 
+            background-color: #fdebd0;
+            padding: 10px 20px;
+            border: 2px solid #e67e22;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>חיפוש נקודת איזון במערך (מעבר משמאל לימין)</h1>
+    <div class="instructions">לחץ על מקש <strong>Enter</strong> כדי להתקדם בכל שלב באנימציה.</div>
+    
+    <div id="phase-title"></div>
+
+    <div class="main-container">
+        <!-- המערך והחצים -->
+        <div id="array-container"></div>
+
+        <!-- הסכום הכולל -->
+        <div id="total-sum-container">
+            <span id="total-sum-label">סכום כולל:</span>
+            <span id="total-sum-value">0</span>
+        </div>
+    </div>
+
+    <!-- לוג החישובים הנגלל -->
+    <div id="calculations-log">
+        <div id="prev-calc-row" class="calc-row old-row"></div>
+        <div id="curr-calc-row" class="calc-row new-row"></div>
+    </div>
+
+    <div>
+        <div id="message-container"></div>
+    </div>
+
+    <script>
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        let phase = 1; // 1: מערך עם נקודת איזון | 2: מערך ללא נקודת איזון
+        let state = "WAIT_TOTAL"; 
+        let arr = [];
+        let currentIndex = -1;
+        let totalSum = 0;
+        let calc1 = 0;
+        let calc2 = 0;
+        let isAnimating = false;
+
+        document.addEventListener("keydown", async (e) => {
+            if (e.key === "Enter" && !isAnimating) {
+                await handleEnter();
+            }
+        });
+
+        function generateArray(hasSolution) {
+            let size = Math.floor(Math.random() * 3) + 8; // גודל בין 8 ל-10
+            let newArr = new Array(size).fill(0);
+
+            if (hasSolution) {
+                let splitIdx = Math.floor(Math.random() * (size - 4)) + 2; 
+                let targetSum = Math.floor(Math.random() * 50) + 80; 
+
+                let currentLeft = 0;
+                for (let i = 0; i <= splitIdx; i++) {
+                    if (i === splitIdx) {
+                        newArr[i] = targetSum - currentLeft;
+                    } else {
+                        let val = Math.floor(Math.random() * (targetSum - currentLeft - (splitIdx - i))) + 1;
+                        newArr[i] = val;
+                        currentLeft += val;
+                    }
+                }
+
+                let currentRight = 0;
+                for (let i = splitIdx + 1; i < size; i++) {
+                    if (i === size - 1) {
+                        newArr[i] = targetSum - currentRight;
+                    } else {
+                        let remainingSlots = size - 1 - i;
+                        let maxVal = targetSum - currentRight - remainingSlots;
+                        let val = Math.floor(Math.random() * Math.min(20, maxVal)) + 1;
+                        newArr[i] = val;
+                        currentRight += val;
+                    }
+                }
+            } else {
+                let validArray = false;
+                while (!validArray) {
+                    for (let i = 0; i < size; i++) {
+                        newArr[i] = Math.floor(Math.random() * 20) + 1;
+                    }
+                    let total = newArr.reduce((a,b) => a+b, 0);
+                    
+                    // התנאי שנוסף: סכום האיברים חייב להיות זוגי
+                    if (total % 2 !== 0) {
+                        continue;
+                    }
+                    
+                    let hasBalancePoint = false;
+                    let sum = 0;
+                    for (let i = 0; i < size; i++) {
+                        sum += newArr[i];
+                        if (sum === total - sum) hasBalancePoint = true;
+                    }
+                    
+                    if (!hasBalancePoint) {
+                        validArray = true;
+                    }
+                }
+            }
+            return newArr;
+        }
+
+        function renderArray() {
+            const container = document.getElementById("array-container");
+            container.innerHTML = "";
+            
+            for (let i = 0; i < arr.length; i++) {
+                // יוצרים מעטפת לכל איבר שכוללת גם את החץ וגם את הריבוע
+                let wrapper = document.createElement("div");
+                wrapper.className = "element-wrapper";
+
+                let arrowSlot = document.createElement("div");
+                arrowSlot.className = "arrow-slot";
+                arrowSlot.id = "arrow-slot-" + i;
+
+                let box = document.createElement("div");
+                box.className = "array-box";
+                box.innerText = arr[i];
+
+                wrapper.appendChild(arrowSlot);
+                wrapper.appendChild(box);
+                container.appendChild(wrapper);
+            }
+        }
+
+        function renderArrow(index) {
+            document.querySelectorAll(".arrow-slot").forEach(slot => slot.innerHTML = "");
+            if (index >= 0 && index < arr.length) {
+                document.getElementById("arrow-slot-" + index).innerHTML = "⬇";
+            }
+        }
+
+        function showMessage(text, type) {
+            const msg = document.getElementById("message-container");
+            msg.innerText = text;
+            msg.className = type === "success" ? "success-msg" : "error-msg";
+        }
+
+        function initPhase() {
+            currentIndex = -1;
+            calc1 = 0;
+            calc2 = 0;
+            totalSum = 0;
+            
+            const msg = document.getElementById("message-container");
+            msg.innerText = "";
+            msg.className = "";
+            
+            document.getElementById("prev-calc-row").innerHTML = "";
+            document.getElementById("curr-calc-row").innerHTML = "";
+
+            let phaseTitle = "";
+            let hasSolution = (phase === 1);
+
+            if (phase === 1) phaseTitle = "סבב א': מערך שבו קיימת נקודת איזון";
+            if (phase === 2) phaseTitle = "סבב ב': מערך שבו לא קיימת נקודת איזון";
+
+            document.getElementById("phase-title").innerText = phaseTitle;
+
+            arr = generateArray(hasSolution);
+            renderArray();
+            renderArrow(-1);
+
+            state = "WAIT_TOTAL";
+            document.getElementById("total-sum-value").innerText = "0";
+        }
+
+        async function handleEnter() {
+            isAnimating = true;
+
+            if (state === "WAIT_TOTAL") {
+                await animateTotalSum();
+                state = "WAIT_STEP";
+            }
+            else if (state === "WAIT_STEP") {
+                await doEfficientStep();
+            }
+            else if (state === "PHASE_DONE") {
+                phase++;
+                if (phase > 2) {
+                    document.getElementById("phase-title").innerText = "ההדגמה הסתיימה בהצלחה!";
+                    const msg = document.getElementById("message-container");
+                    msg.innerText = "כל השלבים הושלמו.";
+                    msg.className = "success-msg";
+                    document.getElementById("prev-calc-row").innerHTML = "";
+                    document.getElementById("curr-calc-row").innerHTML = "";
+                    renderArrow(-1);
+                    isAnimating = false;
+                    return;
+                }
+                initPhase();
+            }
+
+            isAnimating = false;
+        }
+
+        async function animateTotalSum() {
+            let boxes = document.querySelectorAll(".array-box");
+            for (let i = 0; i < arr.length; i++) {
+                boxes[i].classList.add("highlight-total");
+                totalSum += arr[i];
+                document.getElementById("total-sum-value").innerText = totalSum;
+                await sleep(300);
+                boxes[i].classList.remove("highlight-total");
+            }
+        }
+
+        async function doEfficientStep() {
+            if (currentIndex === -1) currentIndex = 0;
+            else currentIndex++;
+
+            if (currentIndex >= arr.length) {
+                showMessage("החץ הגיע לסוף המערך ולא נמצאה נקודת איזון!", "error");
+                state = "PHASE_DONE";
+                return;
+            }
+
+            renderArrow(currentIndex);
+
+            let prevCalc1 = calc1;
+            let prevCalc2 = calc2;
+            let currentVal = arr[currentIndex];
+
+            const prevRow = document.getElementById("prev-calc-row");
+            const currRow = document.getElementById("curr-calc-row");
+
+            if (currRow.innerHTML !== "") {
+                prevRow.innerHTML = currRow.innerHTML;
+            } else {
+                prevRow.innerHTML = "";
+            }
+
+            let newHtmlContent = "";
+            if (currentIndex === 0) {
+                calc1 = currentVal;
+                calc2 = totalSum - currentVal;
+                newHtmlContent = `
+                    <div class="calc-box"><strong>חישוב ראשון:</strong><br>האיבר הראשון = <span style="color:#2980b9; font-weight:bold;">${calc1}</span></div>
+                    <div class="calc-box"><strong>חישוב שני:</strong><br>סכום כולל (${totalSum}) - האיבר הראשון (${currentVal}) = <span style="color:#2980b9; font-weight:bold;">${calc2}</span></div>
+                `;
+            } else {
+                calc1 = prevCalc1 + currentVal;
+                calc2 = prevCalc2 - currentVal;
+                newHtmlContent = `
+                    <div class="calc-box"><strong>חישוב ראשון:</strong><br>סכום קודם (${prevCalc1}) + איבר נוכחי (${currentVal}) = <span style="color:#2980b9; font-weight:bold;">${calc1}</span></div>
+                    <div class="calc-box"><strong>חישוב שני:</strong><br>סכום קודם (${prevCalc2}) - איבר נוכחי (${currentVal}) = <span style="color:#2980b9; font-weight:bold;">${calc2}</span></div>
+                `;
+            }
+
+            currRow.innerHTML = newHtmlContent;
+
+            if (calc1 === calc2) {
+                showMessage(`נמצאה נקודת איזון! באינדקס ${currentIndex}, שני החישובים זהים ותוצאתם היא ${calc1}.`, "success");
+                state = "PHASE_DONE";
+            }
+        }
+
+        initPhase();
+    </script>
+</body>
+</html>

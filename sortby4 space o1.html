@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הדגמת מיון Modulo 4</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        #info-panel {
+            font-size: 24px;
+            margin: 20px auto;
+            padding: 15px;
+            background-color: #fff;
+            border: 2px solid #34495e;
+            border-radius: 10px;
+            display: inline-block;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .var-box {
+            display: inline-block;
+            margin: 0 15px;
+            font-weight: bold;
+        }
+        .var-box span {
+            color: #e74c3c;
+        }
+        #instructions {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #555;
+            background-color: #e8f4f8;
+            padding: 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+        /* הגדרת כיוון משמאל לימין במיוחד עבור המערך */
+        #array-container {
+            direction: ltr; 
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .cell {
+            width: 55px;
+            height: 70px;
+            background-color: #fff;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            /* מעבר חלק במקרה של שינוי רגיל */
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        /* מחלקה לאנימציית הריחוף של ההחלפה */
+        .floating {
+            z-index: 100;
+            box-shadow: 0 15px 25px rgba(0,0,0,0.4);
+            border-color: #f39c12 !important;
+            background-color: #fdfae3 !important;
+        }
+        .arrow {
+            position: absolute;
+            top: 5px;
+            font-size: 20px;
+            visibility: hidden;
+            animation: bounce 0.5s infinite alternate;
+        }
+        @keyframes bounce {
+            from { top: 2px; }
+            to { top: 8px; }
+        }
+        .val {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .sorted {
+            background-color: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .target-x {
+            border-color: #3498db;
+            border-width: 3px;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+        #status {
+            font-size: 28px;
+            color: #27ae60;
+            font-weight: bold;
+            margin-top: 20px;
+            height: 40px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>הדגמת אלגוריתם - מיון Modulo 4</h1>
+    
+    <div id="instructions">
+        לחץ על מקש ה-<strong>Enter</strong> כדי לקדם את הבדיקה צעד אחד קדימה.<br>
+        התא המוקף בכחול מסמן את המיקום <strong>X</strong> (היעד להחלפה). החץ מסמן את המיקום הנבדק <strong>j</strong>.
+    </div>
+
+    <div id="info-panel">
+        <div class="var-box">i: <span id="info-i">0</span></div>
+        <div class="var-box">X: <span id="info-x">0</span></div>
+    </div>
+
+    <div id="array-container"></div>
+    <div id="status"></div>
+
+    <script>
+        const ARRAY_SIZE = 40;
+        let arr = [];
+        for (let k = 0; k < ARRAY_SIZE; k++) {
+            arr.push(Math.floor(Math.random() * 99) + 1);
+        }
+
+        let i = 0; // ערך השארית ירוץ מ-0 עד 2
+        let X = 0; // אינדקס ההחלפה
+        let j = 0; // המצביע הנוכחי
+        let isDone = false; // דגל סיום
+        let isAnimating = false; // דגל למניעת התקדמות בזמן אנימציה
+
+        function render() {
+            const container = document.getElementById('array-container');
+            container.innerHTML = ''; 
+
+            arr.forEach((val, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = 'cell-' + index;
+
+                if (index < X) {
+                    cell.classList.add('sorted');
+                }
+                if (index === X && !isDone) {
+                    cell.classList.add('target-x');
+                }
+
+                const arrowDiv = document.createElement('div');
+                arrowDiv.className = 'arrow';
+                arrowDiv.textContent = '⬇️';
+                if (index === j && !isDone) {
+                    arrowDiv.style.visibility = 'visible';
+                }
+
+                const valDiv = document.createElement('div');
+                valDiv.className = 'val';
+                valDiv.textContent = val;
+
+                cell.appendChild(arrowDiv);
+                cell.appendChild(valDiv);
+                container.appendChild(cell);
+            });
+
+            document.getElementById('info-i').textContent = isDone ? '-' : i;
+            document.getElementById('info-x').textContent = X;
+
+            if (isDone) {
+                document.getElementById('status').textContent = "המיון הסתיים בהצלחה!";
+                
+                // הפיכת כל שאר התאים (שארית 3) לירוקים גם כן
+                const allCells = document.querySelectorAll('.cell');
+                allCells.forEach(c => c.classList.add('sorted'));
+            }
+        }
+
+        function checkPassEnd() {
+            if (j >= arr.length) {
+                i++; // מעבר לשארית הבאה
+                j = X; // תחילת מעבר מהמיקום X
+                
+                // כעת מספיק לרוץ עבור i=0, 1, 2. ברגע ש-i עובר את 2 - סיימנו.
+                if (i > 2) {
+                    isDone = true;
+                    j = -1; 
+                }
+            }
+        }
+
+        function animateSwap(idx1, idx2, callback) {
+            const cell1 = document.getElementById('cell-' + idx1);
+            const cell2 = document.getElementById('cell-' + idx2);
+
+            // חישוב המיקומים במסך
+            const rect1 = cell1.getBoundingClientRect();
+            const rect2 = cell2.getBoundingClientRect();
+
+            const deltaX1 = rect2.left - rect1.left;
+            const deltaY1 = rect2.top - rect1.top;
+
+            const deltaX2 = rect1.left - rect2.left;
+            const deltaY2 = rect1.top - rect2.top;
+
+            // החלת אנימציית הריחוף
+            cell1.style.transition = 'transform 0.5s ease-in-out, box-shadow 0.2s';
+            cell2.style.transition = 'transform 0.5s ease-in-out, box-shadow 0.2s';
+            
+            cell1.classList.add('floating');
+            cell2.classList.add('floating');
+
+            // ביצוע התזוזה בפועל
+            cell1.style.transform = `translate(${deltaX1}px, ${deltaY1}px)`;
+            cell2.style.transform = `translate(${deltaX2}px, ${deltaY2}px)`;
+
+            // המתנה לסיום האנימציה, עדכון הלוגיקה והרינדור מחדש
+            setTimeout(() => {
+                callback();
+            }, 550);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !isDone && !isAnimating) {
+                
+                // בדיקת תנאי המודולו
+                if (arr[j] % 4 === i) {
+                    // אם j שווה ל-X, אין טעם לבצע אנימציית החלפה (הוא מחליף עם עצמו)
+                    if (j === X) {
+                        X++;
+                        j++;
+                        checkPassEnd();
+                        render();
+                    } else {
+                        isAnimating = true;
+                        animateSwap(X, j, () => {
+                            // ביצוע ההחלפה במערך עצמו בסיום האנימציה
+                            let temp = arr[j];
+                            arr[j] = arr[X];
+                            arr[X] = temp;
+                            
+                            X++;
+                            j++;
+                            checkPassEnd();
+                            render();
+                            isAnimating = false;
+                        });
+                    }
+                } else {
+                    // התנאי לא מתקיים - פשוט מתקדמים עם j
+                    j++;
+                    checkPassEnd();
+                    render();
+                }
+            }
+        });
+
+        // קריאה ראשונית לציור המסך
+        render();
+    </script>
+</body>
+</html>

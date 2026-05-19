@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הדמיית מציאת נקודת איזון במערך</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .instructions {
+            color: #7f8c8d;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        #array-wrapper {
+            position: relative;
+            margin-top: 20px;
+            display: inline-block;
+        }
+
+        .array-container {
+            display: flex;
+            gap: 10px;
+            direction: ltr; 
+        }
+
+        .array-box {
+            box-sizing: border-box; 
+            width: 50px;
+            height: 50px;
+            background-color: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #34495e;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .array-box.left-sum {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+            transform: scale(1.05);
+        }
+
+        .array-box.right-sum {
+            background-color: #e74c3c;
+            color: white;
+            border-color: #c0392b;
+            transform: scale(1.05);
+        }
+
+        #arrow {
+            position: absolute;
+            bottom: -40px;
+            left: 0;
+            width: 50px;
+            text-align: center;
+            font-size: 2em;
+            color: #2c3e50;
+            transition: left 0.5s ease-in-out;
+            opacity: 0; 
+        }
+
+        .status-panel {
+            margin-top: 60px;
+            display: flex;
+            gap: 40px;
+            font-size: 1.5em;
+            background: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .sum-text {
+            font-weight: bold;
+        }
+
+        #left-sum-display { color: #2980b9; }
+        #right-sum-display { color: #c0392b; }
+
+        #message {
+            margin-top: 20px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #27ae60;
+            height: 30px;
+        }
+
+        .alert {
+            color: #e67e22;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>הדמיית סכומים במערך</h1>
+    <div class="instructions" id="instruction-text">לחץ על <strong>Enter</strong> כדי להתחיל.</div>
+
+    <div id="array-wrapper">
+        <div class="array-container" id="array-container">
+            <!-- המערך ייווצר כאן באמצעות JS -->
+        </div>
+        <div id="arrow">⬆️</div>
+    </div>
+
+    <div class="status-panel">
+        <div>סכום שמאלי: <span id="left-sum-display" class="sum-text">0</span></div>
+        <div>סכום ימני: <span id="right-sum-display" class="sum-text">0</span></div>
+    </div>
+
+    <div id="message"></div>
+
+    <script>
+        // משתני מצב גלובליים
+        let currentArray = [];
+        let phase = 1; 
+        let arrowIndex = -1;
+        let isAnimating = false;
+        let waitingForNextEnter = true;
+        let searchEnded = false;
+
+        const arrayContainer = document.getElementById('array-container');
+        const arrow = document.getElementById('arrow');
+        const leftSumDisplay = document.getElementById('left-sum-display');
+        const rightSumDisplay = document.getElementById('right-sum-display');
+        const messageDisplay = document.getElementById('message');
+        const instructionText = document.getElementById('instruction-text');
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        // שלב 1: יצירת מערך שבו מובטח שיש פתרון (הסכום הכולל תמיד יהיה זוגי בהגדרה)
+        function generateValidArray() {
+            const size = Math.floor(Math.random() * 3) + 8; // 8-10
+            let arr = Array.from({length: size}, () => Math.floor(Math.random() * 15) + 1);
+            let splitIndex = Math.floor(Math.random() * (size - 2)) + 1;
+
+            let leftSum = arr.slice(0, splitIndex + 1).reduce((a,b)=>a+b, 0);
+            let rightSum = arr.slice(splitIndex + 1).reduce((a,b)=>a+b, 0);
+
+            // איזון הסכומים
+            while(leftSum !== rightSum) {
+                if(leftSum < rightSum) {
+                    let idx = Math.floor(Math.random() * (splitIndex + 1));
+                    if(arr[idx] < 100) { arr[idx]++; leftSum++; }
+                } else {
+                    let idx = Math.floor(Math.random() * (size - splitIndex - 1)) + splitIndex + 1;
+                    if(arr[idx] < 100) { arr[idx]++; rightSum++; }
+                }
+            }
+            return arr;
+        }
+
+        // שלב 2: יצירת מערך ללא פתרון, אילוץ סכום כללי זוגי
+        function generateInvalidArray() {
+            const size = Math.floor(Math.random() * 3) + 8; // 8-10
+            let arr = [];
+            while(true) {
+                arr = Array.from({length: size}, () => Math.floor(Math.random() * 30) + 1);
+                
+                // אילוץ סכום איברים זוגי
+                let totalSum = arr.reduce((a,b) => a+b, 0);
+                if (totalSum % 2 !== 0) {
+                    arr[0]++; // הוספת 1 לאיבר הראשון כדי להפוך את הסכום לזוגי
+                }
+
+                // בדיקה שאין נקודת איזון
+                let valid = false;
+                for(let i=0; i<size-1; i++) {
+                    let left = arr.slice(0, i+1).reduce((a,b)=>a+b, 0);
+                    let right = arr.slice(i+1).reduce((a,b)=>a+b, 0);
+                    if(left === right) valid = true;
+                }
+                if(!valid) break; // יציאה רק אם אין פתרון (והסכום זוגי)
+            }
+            return arr;
+        }
+
+        // ציור המערך על המסך
+        function renderArray() {
+            arrayContainer.innerHTML = '';
+            currentArray.forEach((num, index) => {
+                const box = document.createElement('div');
+                box.classList.add('array-box');
+                box.id = `box-${index}`;
+                box.textContent = num;
+                arrayContainer.appendChild(box);
+            });
+            
+            arrow.style.opacity = '0';
+            leftSumDisplay.textContent = '0';
+            rightSumDisplay.textContent = '0';
+            messageDisplay.textContent = '';
+        }
+
+        // אתחול השלב
+        function initPhase(newPhase) {
+            phase = newPhase;
+            arrowIndex = -1;
+            searchEnded = false;
+            waitingForNextEnter = true;
+            isAnimating = false;
+
+            if (phase === 1) {
+                currentArray = generateValidArray();
+                instructionText.innerHTML = "שלב 1: יש נקודת איזון. (סכום המערך זוגי). לחץ על <strong>Enter</strong> כדי להתחיל סריקה.";
+            } else {
+                currentArray = generateInvalidArray();
+                instructionText.innerHTML = "שלב 2: אין נקודת איזון (אך סכום המערך עדיין זוגי). לחץ על <strong>Enter</strong> כדי להתחיל סריקה.";
+            }
+            renderArray();
+        }
+
+        // ניהול האנימציה המרכזית
+        async function runAnimationStep() {
+            isAnimating = true;
+            waitingForNextEnter = false;
+            
+            if (arrowIndex === -1) {
+                arrowIndex = 0;
+            } else {
+                arrowIndex++;
+            }
+
+            const targetBox = document.getElementById(`box-${arrowIndex}`);
+            arrow.style.opacity = '1';
+            arrow.style.left = `${targetBox.offsetLeft}px`;
+
+            leftSumDisplay.textContent = '0';
+            rightSumDisplay.textContent = '0';
+            document.querySelectorAll('.array-box').forEach(b => {
+                b.classList.remove('left-sum', 'right-sum');
+            });
+            messageDisplay.textContent = 'מחשב סכומים...';
+            messageDisplay.className = '';
+
+            await sleep(500); 
+
+            let currentLeftSum = 0;
+            for(let i = 0; i <= arrowIndex; i++) {
+                const box = document.getElementById(`box-${i}`);
+                box.classList.add('left-sum');
+                currentLeftSum += currentArray[i];
+                leftSumDisplay.textContent = currentLeftSum;
+                await sleep(300);
+            }
+
+            await sleep(300);
+
+            let currentRightSum = 0;
+            for(let i = arrowIndex + 1; i < currentArray.length; i++) {
+                const box = document.getElementById(`box-${i}`);
+                box.classList.add('right-sum');
+                currentRightSum += currentArray[i];
+                rightSumDisplay.textContent = currentRightSum;
+                await sleep(300);
+            }
+
+            await sleep(500);
+
+            if (currentLeftSum === currentRightSum) {
+                messageDisplay.textContent = "שווים! נמצא מקום המקיים את התנאי.";
+                messageDisplay.style.color = "#27ae60"; 
+                searchEnded = true;
+                if (phase === 1) {
+                    instructionText.innerHTML = "השלב הראשון הסתיים. לחץ <strong>Enter</strong> כדי לעבור לשלב 2.";
+                }
+            } else {
+                if (arrowIndex === currentArray.length - 1) {
+                    messageDisplay.textContent = "הגענו לסוף המערך ולא נמצא פתרון.";
+                    messageDisplay.classList.add('alert');
+                    searchEnded = true;
+                    if (phase === 2) {
+                        instructionText.innerHTML = "סיום ההדמיה. (רענן את הדף כדי להתחיל מחדש)";
+                    }
+                } else {
+                    messageDisplay.textContent = "לא שווים. לחץ Enter לקידום החץ.";
+                    messageDisplay.classList.add('alert');
+                    waitingForNextEnter = true;
+                }
+            }
+            
+            isAnimating = false;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); 
+
+                if (isAnimating) return; 
+
+                if (searchEnded) {
+                    if (phase === 1) {
+                        initPhase(2);
+                    }
+                    return; 
+                }
+
+                if (waitingForNextEnter) {
+                    runAnimationStep();
+                }
+            }
+        });
+
+        initPhase(1);
+
+    </script>
+</body>
+</html>
