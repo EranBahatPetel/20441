@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>סימולציית אלגוריתם - included</title>
+    <style>
+        :root {
+            --bg-color: #1e1e2e;
+            --card-bg: #252538;
+            --text-color: #cdd6f4;
+            --accent-color: #89b4fa;
+            --true-color: #a6e3a1;
+            --false-color: #f38ba8;
+            --highlight: #f9e2af;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: var(--accent-color);
+        }
+
+        .inputs-section {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        input {
+            background: #313244;
+            border: 2px solid #45475a;
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 18px;
+            width: 120px;
+            text-align: center;
+        }
+
+        button {
+            background: var(--accent-color);
+            color: #11111b;
+            border: none;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .controls-info {
+            text-align: center;
+            color: #a6adc8;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .visualization {
+            display: none;
+            flex-direction: column;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .numbers-display {
+            display: flex;
+            justify-content: space-around;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .number-box {
+            padding: 10px 20px;
+            background: #313244;
+            border-radius: 8px;
+            border: 2px solid transparent;
+        }
+
+        .active-num {
+            border-color: var(--highlight);
+        }
+
+        .digit-highlight {
+            color: var(--highlight);
+            text-decoration: underline;
+            font-size: 28px;
+        }
+
+        .array-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .array-title {
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .array-row {
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+        }
+
+        .array-cell {
+            flex: 1;
+            min-width: 50px;
+            height: 60px;
+            background: #313244;
+            border: 1px solid #45475a;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+
+        .cell-index {
+            font-size: 12px;
+            color: #89dceb;
+        }
+
+        .cell-value {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .cell-true {
+            background-color: rgba(166, 227, 161, 0.2);
+            border-color: var(--true-color);
+            color: var(--true-color);
+        }
+
+        .cell-checking {
+            border-color: var(--highlight);
+            box-shadow: 0 0 10px var(--highlight);
+        }
+
+        .cell-match {
+            background-color: rgba(166, 227, 161, 0.4);
+            border-color: var(--true-color);
+        }
+
+        .status-box {
+            background: #11111b;
+            border-left: 4px solid var(--accent-color);
+            padding: 15px;
+            border-radius: 4px;
+            min-height: 50px;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .counter-display {
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--highlight);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>אנימציית אלגוריתם (Included)</h1>
+    
+    <div class="inputs-section">
+        <div class="input-group">
+            <label for="inputX">מספר X:</label>
+            <input type="number" id="inputX" value="4342113" min="1">
+        </div>
+        <div class="input-group">
+            <label for="inputY">מספר Y:</label>
+            <input type="number" id="inputY" value="45111" min="1">
+        </div>
+        <div class="input-group" style="justify-content: flex-end;">
+            <button id="startBtn" onclick="initSimulation()">הפעל סימולציה</button>
+        </div>
+    </div>
+    
+    <div class="controls-info" id="controlsInfo">
+        לחץ על כפתור ההפעלה כדי להתחיל. לאחר מכן, לחץ על <strong>Enter</strong> כדי להתקדם שלב.
+    </div>
+
+    <div class="visualization" id="visualZone">
+        <div class="numbers-display">
+            <div id="boxX" class="number-box">X = <span id="valX"></span></div>
+            <div id="boxY" class="number-box">Y = <span id="valY"></span></div>
+        </div>
+
+        <div class="array-container">
+            <div class="array-title">מערך בולאני עבור digitsInX :X</div>
+            <div class="array-row" id="arrXRow"></div>
+        </div>
+
+        <div class="array-container">
+            <div class="array-title">מערך בולאני עבור digitsInY :Y</div>
+            <div class="array-row" id="arrYRow"></div>
+        </div>
+
+        <div class="counter-display">
+            mismatchCount = <span id="counterVal">0</span>
+        </div>
+
+        <div class="status-box" id="statusMessage">
+            לחץ על Enter כדי להתחיל את ריצת האלגוריתם...
+        </div>
+        
+        <div style="text-align: center;">
+            <button id="nextBtn" onclick="handleNextStep()">המשך (Enter)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // משתני מצב גלובליים לניהול האנימציה
+    let state = {
+        xOriginal: 0, yOriginal: 0,
+        xCurrent: 0, yCurrent: 0,
+        digitsInX: Array(10).fill(false),
+        digitsInY: Array(10).fill(false),
+        mismatchCount: 0,
+        steps: [],
+        currentStepIdx: 0
+    };
+
+    // אתחול המערכים הגרפיים הריקים על המסך
+    function renderEmptyArrays() {
+        const arrXRow = document.getElementById('arrXRow');
+        const arrYRow = document.getElementById('arrYRow');
+        arrXRow.innerHTML = '';
+        arrYRow.innerHTML = '';
+
+        for (let i = 0; i < 10; i++) {
+            arrXRow.appendChild(createCell('X', i));
+            arrYRow.appendChild(createCell('Y', i));
+        }
+    }
+
+    function createCell(prefix, index) {
+        const cell = document.createElement('div');
+        cell.className = 'array-cell';
+        cell.id = `cell-${prefix}-${index}`;
+        cell.innerHTML = `
+            <span class="cell-index">${index}</span>
+            <span class="cell-value">false</span>
+        `;
+        return cell;
+    }
+
+    // בניית תור השלבים (Steps) באופן ידני לפי הלוגיקה של הקוד שכתבנו
+    function initSimulation() {
+        const x = parseInt(document.getElementById('inputX').value);
+        const y = parseInt(document.getElementById('inputY').value);
+        
+        if (isNaN(x) || isNaN(y) || x <= 0 || y <= 0) {
+            alert("אנא הזן מספרים שלמים חיוביים תקינים.");
+            return;
+        }
+
+        // אתחול מצב
+        state.xOriginal = x; state.yOriginal = y;
+        state.xCurrent = x; state.yCurrent = y;
+        state.digitsInX = Array(10).fill(false);
+        state.digitsInY = Array(10).fill(false);
+        state.mismatchCount = 0;
+        state.steps = [];
+        state.currentStepIdx = 0;
+
+        document.getElementById('valX').innerText = x;
+        document.getElementById('valY').innerText = y;
+        document.getElementById('counterVal').innerText = 0;
+        renderEmptyArrays();
+        
+        document.getElementById('visualZone').style.display = 'flex';
+        document.getElementById('controlsInfo').innerHTML = "הסימולציה פעילה! לחץ על מקש <strong>Enter</strong> במקלדת או על כפתור 'המשך' כדי להתקדם.";
+
+        // --- בניית רשימת הצעדים (התסריט של האנימציה) ---
+        
+        // שלב 1: ריצה על X ומילוי המערך שלו
+        let tempX = x;
+        state.steps.push({
+            type: 'start-x',
+            msg: `מתחילים לעבור על הספרות של X (${x}) כדי למלא את המערך digitsInX.`
+        });
+
+        while (tempX > 0) {
+            let digit = tempX % 10;
+            let currentXStr = String(tempX);
+            state.steps.push({
+                type: 'process-x',
+                digit: digit,
+                remaining: Math.floor(tempX / 10),
+                msg: `מחלצים את הספרה האחרונה של X: <strong>${digit}</strong>. מסמנים במערך X באינדקס ${digit} ערך true.`
+            });
+            tempX = Math.floor(tempX / 10);
+        }
+
+        // שלב 2: ריצה על Y ומילוי המערך שלו
+        let tempY = y;
+        state.steps.push({
+            type: 'start-y',
+            msg: `סיימנו לעבור על X. כעת עוברים על הספרות של Y (${y}) כדי למלא את המערך digitsInY.`
+        });
+
+        while (tempY > 0) {
+            let digit = tempY % 10;
+            state.steps.push({
+                type: 'process-y',
+                digit: digit,
+                remaining: Math.floor(tempY / 10),
+                msg: `מחלצים את הספרה האחרונה של Y: <strong>${digit}</strong>. מסמנים במערך Y באינדקס ${digit} ערך true.`
+            });
+            tempY = Math.floor(tempY / 10);
+        }
+
+        // שלב 3: מעבר מקבילי על שני המערכים בגודל 10
+        state.steps.push({
+            type: 'start-compare',
+            msg: `שני המערכים מוכנים! כעת נבצע לולאה קבועה מ-0 עד 9 ונשווה ביניהם (מחפשים תאים שדולקים ב-X אך כבויים ב-Y).`
+        });
+
+        let simX = Array(10).fill(false);
+        let simY = Array(10).fill(false);
+        // שחזור זמני של המערכים לטובת חישוב הסימולציה המקבילית
+        let tX = x; while(tX>0){simX[tX%10]=true; tX=Math.floor(tX/10);}
+        let tY = y; while(tY>0){simY[tY%10]=true; tY=Math.floor(tY/10);}
+
+        let count = 0;
+        for (let i = 0; i < 10; i++) {
+            let condition = simX[i] && !simY[i];
+            if (condition) count++;
+            state.steps.push({
+                type: 'compare-cell',
+                index: i,
+                isTrueInX: simX[i],
+                isTrueInY: simY[i],
+                match: condition,
+                newCount: count,
+                msg: `בודקים אינדקס <strong>${i}</strong>:<br> במערך X הוא <strong>${simX[i]}</strong>, ובמערך Y הוא <strong>${simY[i]}</strong>.<br>` +
+                     (condition ? `← התנאי התקיים! הספרה ${i} קיימת ב-X ולא ב-Y. מקדמים את המונה.` : `← התנאי לא התקיים.`)
+            });
+        }
+
+        // שלב סופי
+        state.steps.push({
+            type: 'finish',
+            msg: `האלגוריתם הסתיים בהצלחה! התוצאה הסופית שהוחזרה היא: <strong>${count}</strong>.`
+        });
+
+        // הצגת הצעד הראשון מיד
+        executeStep();
+    }
+
+    // ביצוע הצעד הנוכחי מתוך תסריט הצעדים
+    function executeStep() {
+        if (state.currentStepIdx >= state.steps.length) return;
+        
+        const step = state.steps[state.currentStepIdx];
+        const msgBox = document.getElementById('statusMessage');
+        msgBox.innerHTML = step.msg;
+
+        // ניקוי הדגשות זמניות מצעדים קודמים
+        document.querySelectorAll('.array-cell').forEach(c => c.classList.remove('cell-checking'));
+        document.getElementById('boxX').classList.remove('active-num');
+        document.getElementById('boxY').classList.remove('active-num');
+
+        if (step.type === 'start-x') {
+            document.getElementById('boxX').classList.add('active-num');
+        }
+        else if (step.type === 'process-x') {
+            document.getElementById('boxX').classList.add('active-num');
+            // עדכון ויזואלי של המספר הנחתך
+            document.getElementById('valX').innerHTML = highlightLastDigit(step.remaining, step.digit);
+            
+            // עדכון המערך הויזואלי של X
+            const cell = document.getElementById(`cell-X-${step.digit}`);
+            cell.classList.add('cell-true', 'cell-checking');
+            cell.querySelector('.cell-value').innerText = 'true';
+        }
+        else if (step.type === 'start-y') {
+            document.getElementById('valX').innerText = "0"; // הסתיים
+            document.getElementById('boxY').classList.add('active-num');
+        }
+        else if (step.type === 'process-y') {
+            document.getElementById('boxY').classList.add('active-num');
+            document.getElementById('valY').innerHTML = highlightLastDigit(step.remaining, step.digit);
+            
+            const cell = document.getElementById(`cell-Y-${step.digit}`);
+            cell.classList.add('cell-true', 'cell-checking');
+            cell.querySelector('.cell-value').innerText = 'true';
+        }
+        else if (step.type === 'start-compare') {
+            document.getElementById('valY').innerText = "0"; // הסתיים
+        }
+        else if (step.type === 'compare-cell') {
+            const cellX = document.getElementById(`cell-X-${step.index}`);
+            const cellY = document.getElementById(`cell-Y-${step.index}`);
+            cellX.classList.add('cell-checking');
+            cellY.classList.add('cell-checking');
+            
+            if (step.match) {
+                cellX.classList.add('cell-match');
+                document.getElementById('counterVal').innerText = step.newCount;
+            }
+        }
+        else if (step.type === 'finish') {
+            document.getElementById('nextBtn').disabled = true;
+            document.getElementById('nextBtn').innerText = "הסתיים";
+        }
+    }
+
+    function highlightLastDigit(remaining, digit) {
+        if (remaining === 0) return `<span class="digit-highlight">${digit}</span>`;
+        return `${remaining}<span class="digit-highlight">${digit}</span>`;
+    }
+
+    // מעבר לשלב הבא
+    function handleNextStep() {
+        if (state.steps.length === 0 || state.currentStepIdx >= state.steps.length - 1) return;
+        state.currentStepIdx++;
+        executeStep();
+    }
+
+    // האזנה למקש Enter במקלדת
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            // אם המשתמש נמצא כרגע בתוך תיבת קלט, נפעיל את הסימולציה מההתחלה
+            if (document.activeElement.tagName === 'INPUT') {
+                initSimulation();
+                document.activeElement.blur(); // הורדת הפוקוס מהקלט
+            } else {
+                // אחרת, נקדם את שלב האנימציה
+                handleNextStep();
+            }
+            event.preventDefault();
+        }
+    });
+</script>
+
+</body>
+</html>
