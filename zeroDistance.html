@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>הדמיית מרחק ל-0 הקרוב ביותר</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .instructions {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        /* מכולה עוטפת עבור החץ והמערך כדי שיעבדו יחד ב-LTR ויזואלי */
+        .workspace {
+            direction: ltr; /* מבטיח שאינדקס 0 הוא משמאל ואינדקס 29 הוא מימין */
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* מערך ויזואלי */
+        .array-container {
+            display: flex;
+            gap: 4px;
+            position: relative;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .cell-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 35px;
+            position: relative;
+        }
+
+        .cell {
+            width: 35px;
+            height: 35px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            background-color: #fff;
+            transition: background-color 0.3s, border-color 0.3s;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .cell.zero {
+            background-color: #ffcccc;
+            border-color: #ff4d4d;
+            color: #cc0000;
+        }
+
+        /* חץ תנועה */
+        .arrow-container {
+            height: 30px;
+            position: relative;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .arrow {
+            position: absolute;
+            width: 35px;
+            text-align: center;
+            font-size: 1.5rem;
+            color: #007bff;
+            transition: left 0.2s ease-in-out;
+            top: 0;
+        }
+
+        /* אנימציית דחיפה מלמעלה למטה */
+        .animate-value {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: slideDown 0.4s ease-in-out forwards;
+        }
+
+        @keyframes slideDown {
+            0% {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            50% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .old-value {
+            animation: exitDown 0.4s ease-in-out forwards;
+        }
+
+        @keyframes exitDown {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+        }
+
+        .status-bar {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #444;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>הדמיית מרחק ל-0 הקרוב ביותר</h1>
+    <div class="instructions">לחץ על מקש <strong>Enter</strong> כדי להתקדם צעד אחר צעד</div>
+
+    <div class="container">
+        <!-- אזור העבודה המאולץ לשמאל-ימין עבור סדר האינדקסים והחץ -->
+        <div class="workspace">
+            <!-- אזור החץ העליון -->
+            <div class="arrow-container">
+                <div id="arrow" class="arrow" style="display: none;">⬇️</div>
+            </div>
+
+            <!-- אזור תצוגת המערך -->
+            <div id="arrayContainer" class="array-container"></div>
+        </div>
+
+        <!-- סטטוס הנוכחי (נשאר ב-RTL כללי לקריאה נוחה של הטקסט) -->
+        <div id="statusBar" class="status-bar">לחץ Enter כדי להתחיל את המעבר משמאל לימין...</div>
+    </div>
+
+    <script>
+        const ARRAY_SIZE = 30;
+        let arr = [];
+        let currentIndex = -1;
+        let phase = 'START'; // START, LEFT_TO_RIGHT, RIGHT_TO_LEFT, DONE
+        let lastZeroPos = -1;
+
+        // בניית מערך אקראי של 0 ו-1
+        function initArray() {
+            const container = document.getElementById('arrayContainer');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < ARRAY_SIZE; i++) {
+                const val = Math.random() < 0.3 ? 0 : 1; 
+                arr.push(val);
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'cell-wrapper';
+                wrapper.id = `wrapper-${i}`;
+
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `cell-${i}`;
+                cell.innerText = val;
+
+                wrapper.appendChild(cell);
+                container.appendChild(wrapper);
+            }
+        }
+
+        // עדכון ערך תא עם אנימציית דחיפה מלמעלה למטה
+        function updateCellVisual(index, newValue) {
+            const cell = document.getElementById(`cell-${index}`);
+            const displayValue = newValue === Infinity ? '∞' : newValue;
+
+            if (cell.innerText === displayValue.toString()) return;
+
+            // יצירת אלמנט לערך הישן שיוצא
+            const oldText = cell.innerText;
+            cell.innerHTML = '';
+
+            const oldElem = document.createElement('span');
+            oldElem.className = 'old-value';
+            oldElem.style.position = 'absolute';
+            oldElem.innerText = oldText;
+
+            // יצירת אלמנט לערך החדש שנכנס
+            const newElem = document.createElement('span');
+            newElem.className = 'animate-value';
+            newElem.innerText = displayValue;
+
+            cell.appendChild(oldElem);
+            cell.appendChild(newElem);
+        }
+
+        // הזזת החץ הויזואלי מעל האיבר המתאים
+        function moveArrow(index) {
+            const arrow = document.getElementById('arrow');
+            if (index < 0 || index >= ARRAY_SIZE) {
+                arrow.style.display = 'none';
+                return;
+            }
+            arrow.style.display = 'block';
+            
+            const wrapper = document.getElementById(`wrapper-${index}`);
+            // מיקום ה-offsetLeft כעת מחושב במדויק משמאל לימין תודות ל-workspace LTR
+            const leftPos = wrapper.offsetLeft;
+            arrow.style.left = `${leftPos}px`;
+        }
+
+        // ניהול הצעדים בלחיצת כפתור
+        function handleStep() {
+            const statusBar = document.getElementById('statusBar');
+
+            if (phase === 'START') {
+                phase = 'LEFT_TO_RIGHT';
+                currentIndex = 0;
+                lastZeroPos = -1;
+                moveArrow(currentIndex);
+                statusBar.innerText = "מעבר משמאל לימין התחיל...";
+                processLeftToRightStep();
+                return;
+            }
+
+            if (phase === 'LEFT_TO_RIGHT') {
+                currentIndex++;
+                if (currentIndex < ARRAY_SIZE) {
+                    moveArrow(currentIndex);
+                    processLeftToRightStep();
+                } else {
+                    phase = 'RIGHT_TO_LEFT';
+                    currentIndex = ARRAY_SIZE - 1;
+                    lastZeroPos = -1;
+                    moveArrow(currentIndex);
+                    statusBar.innerText = "הסתיים מעבר שמאלי. מתחיל מעבר מימין לשמאל (חזרה)...";
+                    processRightToLeftStep();
+                }
+                return;
+            }
+
+            if (phase === 'RIGHT_TO_LEFT') {
+                currentIndex--;
+                if (currentIndex >= 0) {
+                    moveArrow(currentIndex);
+                    processRightToLeftStep();
+                } else {
+                    phase = 'DONE';
+                    moveArrow(-1);
+                    statusBar.innerText = "התהליך הסתיים בהצלחה! כל הערכים מייצגים את המרחק ל-0 הקרוב ביותר.";
+                }
+                return;
+            }
+        }
+
+        // לוגיקת שלב: שמאל לימין
+        function processLeftToRightStep() {
+            if (arr[currentIndex] === 0) {
+                lastZeroPos = currentIndex;
+                document.getElementById(`cell-${currentIndex}`).classList.add('zero');
+            } else {
+                if (lastZeroPos === -1) {
+                    arr[currentIndex] = Infinity;
+                    updateCellVisual(currentIndex, Infinity);
+                } else {
+                    const dist = currentIndex - lastZeroPos;
+                    arr[currentIndex] = dist;
+                    updateCellVisual(currentIndex, dist);
+                }
+            }
+        }
+
+        // לוגיקת שלב: ימין לשמאל
+        function processRightToLeftStep() {
+            if (arr[currentIndex] === 0) {
+                lastZeroPos = currentIndex;
+            } else {
+                if (lastZeroPos !== -1) {
+                    const dist = lastZeroPos - currentIndex;
+                    if (dist < arr[currentIndex]) {
+                        arr[currentIndex] = dist;
+                        updateCellVisual(currentIndex, dist);
+                    }
+                }
+            }
+        }
+
+        // האזנה למקש Enter
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleStep();
+            }
+        });
+
+        window.onload = initArray;
+    </script>
+</body>
+</html>
