@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פתרון בעיות מחרוזות - סימולציה מעודכנת</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 20px;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .instructions {
+            background: #e8f4fd;
+            padding: 10px;
+            border-right: 5px solid #3498db;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        /* בעיה 1 - עיצוב */
+        .string-display-container {
+            position: relative;
+            margin: 50px 0;
+            padding: 30px 0;
+        }
+        .string-display {
+            display: flex;
+            gap: 5px;
+            font-family: monospace;
+            font-size: 24px;
+            justify-content: flex-start;
+            direction: ltr;
+            padding-left: 10px;
+        }
+        .char-box {
+            width: 30px;
+            text-align: center;
+            position: relative;
+            line-height: 1; 
+        }
+        .char-box.is-c {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .pointer {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #2ecc71;
+            font-size: 20px;
+            display: none;
+        }
+        .pointer.active {
+            display: block;
+        }
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: visible;
+        }
+        .arc-path {
+            fill: none;
+            stroke: #3498db;
+            stroke-width: 2;
+        }
+        .arrow-path {
+            fill: none;
+            stroke: #e67e22;
+            stroke-width: 2;
+        }
+        .counters {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+        .counter-box {
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .counter-val {
+            font-weight: bold;
+            font-size: 22px;
+            color: #2c3e50;
+        }
+        .highlight-final {
+            color: #27ae60 !important;
+            font-size: 28px !important;
+            border: 2px solid #27ae60;
+            padding: 2px 10px;
+            border-radius: 5px;
+            background: #e8f8f5;
+        }
+
+        /* בעיה 2 - עיצוב */
+        table {
+            border-collapse: collapse;
+            width: 50%;
+            margin: 20px 0;
+            font-size: 18px;
+            text-align: center;
+        }
+        th, td {
+            border: 1px solid #bdc3c7;
+            padding: 12px;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+        }
+        .hidden-el {
+            visibility: hidden;
+        }
+        .empty-row td {
+            padding: 6px;
+            border-top: none;
+            border-bottom: none;
+        }
+        .result-box {
+            font-size: 22px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        /* כיווניות משמאל לימין עבור המתמטיקה */
+        .math-wrapper {
+            direction: ltr;
+            text-align: right; 
+            margin-top: 15px;
+        }
+
+        .math-fraction-container {
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+            gap: 10px;
+            font-weight: bold;
+            color: #27ae60;
+            background: #e8f8f5;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px dashed #27ae60;
+        }
+        .fraction {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .numerator {
+            border-bottom: 2px solid #27ae60;
+            padding: 2px 6px;
+        }
+        .denominator {
+            padding: 2px 6px;
+        }
+        
+        .active-section {
+            border: 2px solid #3498db;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>סימולציית פתרון בעיות מחרוזת</h1>
+    <p class="instructions">לחץ על מקש Enter כדי להתקדם צעד אחר צעד בסימולציה הפעילה.</p>
+
+    <!-- בעיה 1 -->
+    <div id="section1" class="container active-section" tabindex="0">
+        <h2>בעיה 1: תתי-מחרוזות המתחילות ומסתיימות ב-'c' וכוללות בדיוק פעם אחת 'c' פנימי (סה"כ 3 'c')</h2>
+        <p>מחרוזת אקראית שהוגרלה:</p>
+        
+        <div class="string-display-container">
+            <svg id="svg-overlay"></svg>
+            <div class="string-display" id="string-container"></div>
+        </div>
+
+        <div class="counters">
+            <div class="counters-box">מוני 'c' שנפגשו: <span id="c-count" class="counter-val">0</span></div>
+            <div class="counter-box">מונֶה תוצאה (תתי-מחרוזות תקינות): <span id="ans-count" class="counter-val">0</span></div>
+        </div>
+    </div>
+
+    <!-- בעיה 2 -->
+    <div id="section2" class="container" tabindex="0">
+        <h2>בעיה 2: מספר תתי-מחרוזות עם לכל היותר K פעמים 'c' פנימיים (סה"כ K+2 תווים מסוג 'c')</h2>
+        <p>נניח ומספר ה-'c' הכולל במחרוזת הוא <span style="font-weight:bold; color:#e74c3c;">nc</span>.</p>
+        
+        <table id="prob2-table">
+            <thead>
+                <tr>
+                    <th>מספר 'c' בתוך המחרוזת</th>
+                    <th>מספר מחרוזות</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- שורה 2 (מיד מתחת לכותרת) -->
+                <tr id="row-idx-2">
+                    <td><span class="hidden-el">0</span></td>
+                    <td><span class="hidden-el">nc - 1</span></td>
+                </tr>
+                <!-- שורה 3 -->
+                <tr id="row-idx-3">
+                    <td><span class="hidden-el">1</span></td>
+                    <td><span class="hidden-el">nc - 2</span></td>
+                </tr>
+                <!-- שורה 4 -->
+                <tr id="row-idx-4">
+                    <td><span class="hidden-el">2</span></td>
+                    <td><span class="hidden-el">nc - 3</span></td>
+                </tr>
+                <!-- שורה 5 -->
+                <tr id="row-idx-5">
+                    <td><span class="hidden-el">3</span></td>
+                    <td><span class="hidden-el">nc - 4</span></td>
+                </tr>
+                <!-- כמה שורות ריקות עם שלוש נקודות באמצע -->
+                <tr id="row-dots-1" class="empty-row">
+                    <td><span class="hidden-el"></span></td>
+                    <td><span class="hidden-el"></span></td>
+                </tr>
+                <tr id="row-dots-mid">
+                    <td colspan="2"><span class="hidden-el">...</span></td>
+                </tr>
+                <tr id="row-dots-2" class="empty-row">
+                    <td><span class="hidden-el"></span></td>
+                    <td><span class="hidden-el"></span></td>
+                </tr>
+                <!-- שורה אחרונה של k -->
+                <tr id="row-idx-last">
+                    <td><span class="hidden-el">k</span></td>
+                    <td><span class="hidden-el">nc - (k + 1)</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="result-box" id="prob2-result">
+            <span>פתרון הבעיה (סכום הסדרה החשבונית):</span>
+            <div class="math-wrapper">
+                <div class="math-fraction-container">
+                    <span>S = </span>
+                    <div class="fraction">
+                        <div class="numerator">(k + 1) · [ (nc - 1) + (nc - (k + 1)) ]</div>
+                        <div class="denominator">2</div>
+                    </div>
+                    <span> = </span>
+                    <div class="fraction">
+                        <div class="numerator">(k + 1) · (2nc - k - 2)</div>
+                        <div class="denominator">2</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- הגדרות כלליות ומצב אפליקציה ---
+        let currentSection = 1; 
+
+        // --- קוד עבור בעיה 1 ---
+        let generatedString = "";
+        let cIndices = []; 
+        let p1Index = -1; 
+        let p1CCount = 0; 
+        let p1AnsCount = 0; 
+
+        function generateValidString() {
+            const alphabet = "abdefghijklmnopqrstuvwxyz"; 
+            let strArr = Array(30).fill('');
+            const numC = Math.floor(Math.random() * 3) + 6; 
+            
+            let indices = [];
+            while(indices.length < numC) {
+                let r = Math.floor(Math.random() * 30);
+                if(!indices.includes(r)) indices.push(r);
+            }
+            indices.sort((a,b) => a-b);
+            cIndices = indices;
+
+            for(let i=0; i<30; i++) {
+                if(indices.includes(i)) {
+                    strArr[i] = 'c';
+                } else {
+                    strArr[i] = alphabet[Math.floor(Math.random() * alphabet.length)];
+                }
+            }
+            return strArr.join('');
+        }
+
+        function initSection1() {
+            generatedString = generateValidString();
+            const container = document.getElementById("string-container");
+            container.innerHTML = "";
+            
+            for(let i=0; i<30; i++) {
+                let char = generatedString[i];
+                let div = document.createElement("div");
+                div.className = "char-box" + (char === 'c' ? " is-c" : "");
+                div.id = `char-${i}`;
+                div.innerHTML = `${char}<div class="pointer" id="ptr-${i}">↑</div>`;
+                container.appendChild(div);
+            }
+        }
+
+        function drawArc(fromIdx, toIdx, midIdx) {
+            const svg = document.getElementById("svg-overlay");
+            const fromEl = document.getElementById(`char-${fromIdx}`);
+            const toEl = document.getElementById(`char-${toIdx}`);
+            const midEl = document.getElementById(`char-${midIdx}`);
+            
+            const containerRect = document.getElementById("string-container").getBoundingClientRect();
+            const rFrom = fromEl.getBoundingClientRect();
+            const rTo = toEl.getBoundingClientRect();
+            const rMid = midEl.getBoundingClientRect();
+
+            const xFrom = rFrom.left - containerRect.left + (rFrom.width / 2);
+            const xTo = rTo.left - containerRect.left + (rTo.width / 2);
+            const xMid = rMid.left - containerRect.left + (rMid.width / 2);
+            
+            // הורדה מלאה לתוך התיבה של האותיות כדי לקטוע את הריחוף כמעט לחלוטין (גובה האות קרוב ל-4-5 פיקסלים מעל לבסיס)
+            const yBase = rFrom.top - containerRect.top + 5; 
+
+            // נקודת השליטה של הקשת
+            const height = Math.min(100, Math.abs(xTo - xFrom) * 0.45);
+            const xControl = (xFrom + xTo) / 2;
+            const yControl = yBase - height;
+
+            // ציור הקשת
+            const pathData = `M ${xFrom} ${yBase} Q ${xControl} ${yControl} ${xTo} ${yBase}`;
+            const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            pathEl.setAttribute("d", pathData);
+            pathEl.setAttribute("class", "arc-path");
+            svg.appendChild(pathEl);
+
+            // נקודת האמצע על הקשת (t = 0.5)
+            const t = 0.5;
+            const xArcMid = (1 - t) * (1 - t) * xFrom + 2 * (1 - t) * t * xControl + t * t * xTo;
+            const yArcMid = (1 - t) * (1 - t) * yBase + 2 * (1 - t) * t * yControl + t * t * yBase;
+
+            // יעד החץ - מגיע בדיוק לחלק העליון של ה-c
+            const yTarget = yBase;
+
+            // ציור קו החץ
+            const arrowData = `M ${xArcMid} ${yArcMid} L ${xMid} ${yTarget}`;
+            const arrowEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            arrowEl.setAttribute("d", arrowData);
+            arrowEl.setAttribute("class", "arrow-path");
+            svg.appendChild(arrowEl);
+            
+            // חישוב ראש חץ ממורכז ומדויק על היעד
+            const dx = xMid - xArcMid;
+            const dy = yTarget - yArcMid;
+            const angle = Math.atan2(dy, dx); 
+
+            const headLength = 10;
+            const headWidth = 8;
+
+            const xBaseCenter = xMid - (headLength / 2) * Math.cos(angle);
+            const yBaseCenter = yTarget - (headLength / 2) * Math.sin(angle);
+
+            const xTip = xBaseCenter + (headLength / 2) * Math.cos(angle);
+            const yTip = yBaseCenter + (headLength / 2) * Math.sin(angle);
+
+            const xLeft = xBaseCenter - (headWidth / 2) * Math.sin(angle);
+            const yLeft = yBaseCenter + (headWidth / 2) * Math.cos(angle);
+
+            const xRight = xBaseCenter + (headWidth / 2) * Math.sin(angle);
+            const yRight = yBaseCenter - (headWidth / 2) * Math.cos(angle);
+
+            const headEl = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            headEl.setAttribute("points", `${xTip},${yTip} ${xLeft},${yLeft} ${xRight},${yRight}`);
+            headEl.setAttribute("fill", "#e67e22");
+            svg.appendChild(headEl);
+        }
+
+        function advanceSection1() {
+            if (p1Index >= 29) {
+                document.getElementById("ans-count").classList.add("highlight-final");
+                document.getElementById("section1").classList.remove("active-section");
+                document.getElementById("section2").classList.add("active-section");
+                currentSection = 2;
+                return;
+            }
+
+            if (p1Index >= 0) {
+                document.getElementById(`ptr-${p1Index}`).classList.remove("active");
+            }
+
+            p1Index++;
+            document.getElementById(`ptr-${p1Index}`).classList.add("active");
+
+            if (generatedString[p1Index] === 'c') {
+                p1CCount++;
+                document.getElementById("c-count").innerText = p1CCount;
+
+                if (p1CCount >= 3) {
+                    p1AnsCount++;
+                    document.getElementById("ans-count").innerText = p1AnsCount;
+                    
+                    let currC = cIndices[p1CCount - 1];
+                    let midC = cIndices[p1CCount - 2];
+                    let prevC = cIndices[p1CCount - 3];
+                    
+                    drawArc(prevC, currC, midC);
+                }
+            }
+            
+            if (p1Index === 29) {
+                document.getElementById("ans-count").classList.add("highlight-final");
+            }
+        }
+
+
+        // --- קוד עבור בעיה 2 ---
+        const p2Steps = [
+            { id: "row-idx-3", cell: 0 },    
+            { id: "row-idx-3", cell: 1 },    
+            { id: "row-idx-2", cell: 0 },    
+            { id: "row-idx-2", cell: 1 },    
+            { id: "row-idx-4", cell: 0 },    
+            { id: "row-idx-4", cell: 1 },    
+            { id: "row-idx-5", cell: 0 },    
+            { id: "row-idx-5", cell: 1 },    
+            { id: "row-dots-block", isDots: true }, 
+            { id: "row-idx-last", cell: 0 }, 
+            { id: "row-idx-last", cell: 1 }, 
+            { id: "prob2-result", isResult: true } 
+        ];
+        
+        let p2CurrentStep = 0;
+
+        function advanceSection2() {
+            if (p2CurrentStep >= p2Steps.length) return;
+
+            let step = p2Steps[p2CurrentStep];
+
+            if (step.isResult) {
+                let resultBox = document.getElementById("prob2-result");
+                resultBox.style.display = "block";
+                p2CurrentStep++;
+                return;
+            }
+
+            if (step.isDots) {
+                document.getElementById("row-dots-1").querySelectorAll("span").forEach(s => s.classList.remove("hidden-el"));
+                document.getElementById("row-dots-mid").querySelectorAll("span").forEach(s => s.classList.remove("hidden-el"));
+                document.getElementById("row-dots-2").querySelectorAll("span").forEach(s => s.classList.remove("hidden-el"));
+                p2CurrentStep++;
+                return;
+            }
+
+            let row = document.getElementById(step.id);
+            let cells = row.getElementsByTagName("td");
+            let span = cells[step.cell].querySelector("span");
+            span.classList.remove("hidden-el");
+
+            p2CurrentStep++;
+        }
+
+        // --- האזנה למקש Enter ---
+        document.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); 
+                if (currentSection === 1) {
+                    advanceSection1();
+                } else if (currentSection === 2) {
+                    advanceSection2();
+                }
+            }
+        });
+
+        initSection1();
+    </script>
+</body>
+</html>
