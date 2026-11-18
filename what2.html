@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>הדמיית חלון צף - חיפוש סכום ברצף</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+        }
+
+        .setup-container {
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .array-container {
+            display: flex;
+            flex-direction: row;
+            direction: ltr; 
+            position: relative;
+            margin-top: 40px;
+            margin-bottom: 60px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .cell-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 50px;
+            position: relative;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #bdc3c7;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 16px;
+            background-color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .cell.in-window {
+            background-color: #e8f8f5;
+            border-color: #2ecc71;
+        }
+
+        .index {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+
+        .pointer {
+            position: absolute;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: white;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .pointer.l {
+            background-color: #e74c3c;
+            bottom: -30px;
+        }
+
+        .pointer.r {
+            background-color: #2980b9;
+            bottom: -55px;
+        }
+
+        .status-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .metric {
+            font-size: 18px;
+            margin: 10px 0;
+            color: #34495e;
+        }
+
+        .metric span {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .message {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .failure {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .instruction-tip {
+            color: #7f8c8d;
+            font-size: 15px;
+            margin-bottom: 15px;
+            background: #eebd2b1a;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px dashed #f1c40f;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>הדמיית חלון צף (Two Pointers)</h1>
+
+    <!-- שלב א: הזנת ה-num המבוקש -->
+    <div class="setup-container">
+        <label for="targetNum">הכנס את ה-num המבוקש:</label>
+        <input type="number" id="targetNum" min="1" value="50">
+        <button id="startBtn" onclick="initSearch()">התחל חיפוש</button>
+        <button onclick="generateNewArray()">הגרל מערך חדש</button>
+    </div>
+
+    <!-- הנחיית שימוש ממוקדת -->
+    <div class="instruction-tip" id="keyboardTip" style="display: none;">
+        מדריך: לחץ על מקש <strong>Enter</strong> כדי לבצע את הצעד הבא באלגוריתם.
+    </div>
+
+    <!-- תצוגת המערך והמצביעים -->
+    <div class="array-container" id="arrayContainer"></div>
+
+    <!-- פאנל נתונים ומצב הנוכחי -->
+    <div class="status-panel" id="statusPanel" style="display: none;">
+        <div class="metric">הסכום המבוקש (num): <span id="valNumBox">-</span></div>
+        <div class="metric">הסכום הנוכחי (sum): <span id="valSum">-</span></div>
+        <div class="metric">הסבר פעולה: <span id="valAction" style="font-weight: normal; color: #7f8c8d;">-</span></div>
+        <div id="msgContainer" class="message" style="display: none;"></div>
+    </div>
+
+    <script>
+        let array = [];
+        const arraySize = 20;
+        
+        let l = 0;
+        let r = 1;
+        let currentSum = 0;
+        let targetNum = 0;
+        let isRunning = false;
+
+        window.onload = function() {
+            generateNewArray();
+            
+            // האזנה גלובלית למקש Enter
+            window.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault(); 
+                    if (isRunning) {
+                        nextStep();
+                    } else {
+                        initSearch();
+                    }
+                }
+            });
+        };
+
+        function generateNewArray() {
+            array = [];
+            for (let i = 0; i < arraySize; i++) {
+                array.push(Math.floor(Math.random() * 20) + 1);
+            }
+            isRunning = false;
+            document.getElementById('keyboardTip').style.display = 'none';
+            document.getElementById('statusPanel').style.display = 'none';
+            document.getElementById('msgContainer').style.display = 'none';
+            renderArray();
+        }
+
+        function renderArray() {
+            const container = document.getElementById('arrayContainer');
+            container.innerHTML = '';
+
+            // יצירת התאים משמאל לימין
+            array.forEach((num, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'cell-wrapper';
+
+                const indexDiv = document.createElement('div');
+                indexDiv.className = 'index';
+                indexDiv.innerText = index;
+
+                const cellDiv = document.createElement('div');
+                cellDiv.className = 'cell';
+                cellDiv.id = `cell-${index}`;
+                cellDiv.innerText = num;
+
+                if (isRunning && index >= l && index <= r - 1) {
+                    cellDiv.classList.add('in-window');
+                }
+
+                wrapper.appendChild(indexDiv);
+                wrapper.appendChild(cellDiv);
+                container.appendChild(wrapper);
+            });
+
+            // תא קצה וירטואלי
+            const extraWrapper = document.createElement('div');
+            extraWrapper.className = 'cell-wrapper';
+            extraWrapper.style.width = '50px';
+            
+            const extraIndex = document.createElement('div');
+            extraIndex.className = 'index';
+            extraIndex.innerText = arraySize;
+
+            const extraCell = document.createElement('div');
+            extraCell.className = 'cell';
+            extraCell.style.border = '2px dashed #bdc3c7';
+            extraCell.style.backgroundColor = '#fafafa';
+            extraCell.innerText = 'קצה';
+
+            extraWrapper.appendChild(extraIndex);
+            extraWrapper.appendChild(extraCell);
+            container.appendChild(extraWrapper);
+
+            // מיקום המצביעים
+            if (isRunning) {
+                const lPointer = document.createElement('div');
+                lPointer.className = 'pointer l';
+                lPointer.innerText = 'l';
+                lPointer.style.left = `${10 + (l * 50) + 12}px`;
+                container.appendChild(lPointer);
+
+                const rPointer = document.createElement('div');
+                rPointer.className = 'pointer r';
+                rPointer.innerText = 'r';
+                rPointer.style.left = `${10 + (r * 50) + 12}px`;
+                container.appendChild(rPointer);
+            }
+        }
+
+        function initSearch() {
+            const inputVal = document.getElementById('targetNum').value;
+            targetNum = parseInt(inputVal);
+
+            if (isNaN(targetNum) || targetNum <= 0) {
+                alert("אנא הכנס מספר טבעי תקין הגדול מ-0");
+                return;
+            }
+
+            l = 0;
+            r = 1;
+            currentSum = array[0];
+            isRunning = true;
+
+            document.getElementById('keyboardTip').style.display = 'block';
+            document.getElementById('statusPanel').style.display = 'block';
+            document.getElementById('msgContainer').style.display = 'none';
+            
+            updateStatusPanel("החיפוש התחיל. המצביעים מאותחלים: l=0, r=1. לחץ Enter כדי להמשיך.");
+            renderArray();
+        }
+
+        function updateStatusPanel(actionText) {
+            document.getElementById('valNumBox').innerText = targetNum;
+            document.getElementById('valSum').innerText = currentSum;
+            document.getElementById('valAction').innerText = actionText;
+        }
+
+        function nextStep() {
+            if (!isRunning) return;
+
+            // בדיקת התאמה ל-num
+            if (currentSum === targetNum) {
+                endSearch(true, `נמצא רצף! מאינדקס ${l} עד אינדקס ${r-1} הסכום הוא בדיוק ${targetNum}.`);
+                return;
+            }
+
+            // בדיקת חריגה
+            if (r > arraySize) {
+                endSearch(false, "החיפוש הסתיים בכישלון: המצביע r חרג מגבולות המערך ולא נמצא רצף מתאים.");
+                return;
+            }
+
+            let actionDescription = "";
+
+            // לוגיקת האלגוריתם בהתאמה ל-num
+            if (currentSum < targetNum) {
+                if (r < arraySize) {
+                    currentSum += array[r];
+                }
+                r++;
+                actionDescription = `הסכום קטן מ-${targetNum} ➔ מצביע r זז ימינה.`;
+            } 
+            else if (currentSum > targetNum) {
+                currentSum -= array[l];
+                l++;
+                actionDescription = `הסכום גדול מ-${targetNum} ➔ מצביע l זז ימינה.`;
+
+                if (l === r) {
+                    actionDescription += " l השיג את r ➔ מצביע r זז צעד ימינה.";
+                    if (r < arraySize) {
+                        currentSum += array[r];
+                    }
+                    r++;
+                }
+            }
+
+            renderArray();
+            
+            if (currentSum === targetNum) {
+                updateStatusPanel(actionDescription + " (הושג הסכום המבוקש! לחץ Enter לאישור הבדיקה)");
+            } else if (r > arraySize && currentSum !== targetNum) {
+                updateStatusPanel(actionDescription + " (המצביע r חרג מהמערך. לחץ Enter לסיום)");
+            } else {
+                updateStatusPanel(actionDescription);
+            }
+        }
+
+        function endSearch(isSuccess, message) {
+            isRunning = false;
+            document.getElementById('keyboardTip').style.display = 'none';
+            
+            const msgContainer = document.getElementById('msgContainer');
+            msgContainer.style.display = 'block';
+            msgContainer.innerText = message;
+            
+            if (isSuccess) {
+                msgContainer.className = "message success";
+            } else {
+                msgContainer.className = "message failure";
+            }
+        }
+    </script>
+</body>
+</html>
