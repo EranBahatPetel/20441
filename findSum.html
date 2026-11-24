@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חיפוש במערך ממויין שעבר הזזה ציקלית - שלב אחר שלב</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        /* אזור הבקרה */
+        .controls-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #ecf0f1;
+            border-radius: 6px;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        input[type="number"] {
+            padding: 10px 15px;
+            width: 100px;
+            font-size: 22px;
+            font-weight: bold;
+            border: 2px solid #3498db;
+            border-radius: 6px;
+            text-align: center;
+            color: #2c3e50;
+        }
+        /* תצוגת הסכום הנוכחי בזמן אמת */
+        .current-sum-display {
+            font-size: 20px;
+            font-weight: bold;
+            background-color: #34495e;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 6px;
+            min-width: 160px;
+            text-align: center;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.3s;
+        }
+        .sum-match {
+            background-color: #2ecc71 !important;
+            animation: pulse 0.5s infinite alternate;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        /* אזור הסימולציה הויזואלית כולל המצביעים */
+        .simulation-zone {
+            margin: 40px 0;
+            position: relative;
+        }
+        
+        /* שורות המצביעים */
+        .pointer-row-top, .pointer-row-bottom {
+            display: flex;
+            direction: ltr;
+            height: 30px;
+            position: relative;
+            width: 100%;
+        }
+        .pointer-label {
+            position: absolute;
+            width: 5%;
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+            transition: left 0.5s ease-in-out;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .pointer-row-top .pointer-label::after { content: '↓'; font-size: 14px; display: block; }
+        .pointer-row-bottom .pointer-label::before { content: '↑'; font-size: 14px; display: block; }
+
+        /* צבעי המצביעים */
+        .p-low { color: #e67e22; }
+        .p-high { color: #e74c3c; }
+        .p-mid { color: #9b59b6; }
+        .p-left { color: #2980b9; }
+        .p-right { color: #27ae60; }
+        .p-s-left { color: #d35400; font-weight: 900; }
+        .p-s-right { color: #c0392b; font-weight: 900; }
+
+        /* המערך הויזואלי */
+        .array-wrapper {
+            position: relative;
+            height: 80px;
+            border: 1px dashed #ccc;
+            background: #fafafa;
+            border-radius: 4px;
+        }
+        .array-container {
+            display: flex;
+            direction: ltr; /* משמאל לימין */
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .array-item {
+            width: 5%; /* 20 איברים */
+            box-sizing: border-box;
+            border: 1px solid #34495e;
+            background-color: #34495e;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.3s;
+            position: relative;
+            height: 100%;
+        }
+        .array-item .index {
+            font-size: 10px;
+            color: #bdc3c7;
+            margin-top: 4px;
+        }
+        
+        /* מחלקות עיצוב בזמן ריצה */
+        .item-low { background-color: #e67e22 !important; }
+        .item-high { background-color: #e74c3c !important; }
+        .item-mid { background-color: #9b59b6 !important; font-size: 1.2em; z-index: 10; }
+        .item-shift-found { 
+            background-color: #9b59b6 !important; 
+            animation: blink 0.6s infinite alternate; 
+            z-index: 15; 
+        }
+        .item-match { background-color: #2ecc71 !important; border-color: #27ae60 !important; font-size: 1.1em; z-index: 12; }
+
+        /* אזור הלוגים וההסברים */
+        .status-box {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            min-height: 120px;
+            font-family: monospace;
+            white-space: pre-line;
+            overflow-y: auto;
+            max-height: 350px;
+            border: 2px solid transparent;
+            line-height: 1.5;
+        }
+        .waiting-input {
+            border-color: #e67e22;
+            box-shadow: 0 0 10px rgba(230, 126, 34, 0.5);
+        }
+
+        @keyframes blink {
+            from { background-color: #9b59b6 !important; opacity: 1; }
+            to { background-color: #8e44ad !important; opacity: 0.5; }
+        }
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.03); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>חיפוש במערך ממויין שעבר הזזה ציקלית</h1>
+    
+    <div class="controls-panel">
+        <div>
+            <button id="btn-gen" onclick="initSimulation()">1. ג'נרט מערך</button>
+            <span id="shift-info" style="margin-right: 15px; font-weight: bold;"></span>
+        </div>
+        <div class="input-group">
+            <label for="targetX">הכנס סכום מבוקש (X):</label>
+            <input type="number" id="targetX" value="50" min="1" max="200">
+            <div id="current-sum-box" class="current-sum-display">סכום נוכחי: --</div>
+            <button id="btn-search" onclick="startSearch()" disabled>2. התחל חיפוש</button>
+        </div>
+    </div>
+
+    <div class="simulation-zone">
+        <div id="pointers-top" class="pointer-row-top"></div>
+        
+        <div class="array-wrapper">
+            <div id="array-view" class="array-container"></div>
+        </div>
+        
+        <div id="pointers-bottom" class="pointer-row-bottom"></div>
+    </div>
+
+    <h3>שלבי ביצוע האלגוריתם (לחץ על <b>Enter</b> כדי להתקדם):</h3>
+    <div id="status" class="status-box">לחץ על "ג'נרט מערך" כדי להתחיל...</div>
+</div>
+
+<script>
+    const ARRAY_SIZE = 20;
+    let originalArray = [];
+    let rotatedArray = [];
+    let shiftAmount = 0;
+    let elementElements = []; 
+
+    function waitForEnter() {
+        const logBox = document.getElementById('status');
+        logBox.classList.add('waiting-input');
+        
+        return new Promise(resolve => {
+            function handleKeyDown(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    logBox.classList.remove('waiting-input');
+                    window.removeEventListener('keydown', handleKeyDown);
+                    resolve();
+                }
+            }
+            window.addEventListener('keydown', handleKeyDown);
+        });
+    }
+
+    // פונקציות לניהול תגי המצביעים הויזואליים על גבי המסך
+    function setTopPointer(label, positionIndex, colorClass) {
+        if (positionIndex < 0 || positionIndex >= ARRAY_SIZE) return;
+        const row = document.getElementById('pointers-top');
+        const el = document.createElement('div');
+        el.className = `pointer-label ${colorClass}`;
+        el.style.left = `${positionIndex * 5}%`;
+        el.innerText = label;
+        row.appendChild(el);
+    }
+
+    function setBottomPointer(label, positionIndex, colorClass) {
+        if (positionIndex < 0 || positionIndex >= ARRAY_SIZE) return;
+        const row = document.getElementById('pointers-bottom');
+        const el = document.createElement('div');
+        el.className = `pointer-label ${colorClass}`;
+        el.style.left = `${positionIndex * 5}%`;
+        el.innerText = label;
+        row.appendChild(el);
+    }
+
+    function clearPointers() {
+        document.getElementById('pointers-top').innerHTML = '';
+        document.getElementById('pointers-bottom').innerHTML = '';
+    }
+
+    // אתחול הסימולציה ויצירת המערך המקורי
+    async function initSimulation() {
+        document.getElementById('btn-gen').disabled = true;
+        document.getElementById('btn-search').disabled = true;
+        
+        // איפוס חלונית הסכום הנוכחי
+        const sumBox = document.getElementById('current-sum-box');
+        sumBox.innerText = "סכום נוכחי: --";
+        sumBox.classList.remove('sum-match');
+
+        clearPointers();
+
+        originalArray = [];
+        let current = Math.floor(Math.random() * 10) + 5;
+        for(let i=0; i<ARRAY_SIZE; i++) {
+            originalArray.push(current);
+            current += Math.floor(Math.random() * 8) + 2; 
+        }
+
+        shiftAmount = Math.floor(Math.random() * ARRAY_SIZE);
+        
+        rotatedArray = new Array(ARRAY_SIZE);
+        for(let i=0; i<ARRAY_SIZE; i++) {
+            let newPos = (i + shiftAmount) % ARRAY_SIZE;
+            rotatedArray[newPos] = originalArray[i];
+        }
+
+        const container = document.getElementById('array-view');
+        container.innerHTML = '';
+        elementElements = [];
+
+        for(let i=0; i<ARRAY_SIZE; i++) {
+            const div = document.createElement('div');
+            div.className = 'array-item';
+            div.innerHTML = `<span>${originalArray[i]}</span><span class="index">${i}</span>`;
+            container.appendChild(div);
+            elementElements.push(div);
+        }
+
+        const logBox = document.getElementById('status');
+        logBox.innerText = `נוצר מערך ממויין וסדור משמאל לימין.\nהוגרלה בסתר הזזה ציקלית בגודל: ${shiftAmount}.\n\n⌨️ [לחץ על ENTER במקלדת כדי לבצע את הריחוף וההזזה הציקלית...]`;
+        document.getElementById('shift-info').innerText = `ההזזה שהוגרלה: ${shiftAmount}`;
+        
+        await waitForEnter();
+
+        logBox.innerText = `מבצע ריחוף של האיברים למקומם החדש...`;
+        
+        for(let i=0; i<ARRAY_SIZE; i++) {
+            let newPos = (i + shiftAmount) % ARRAY_SIZE;
+            let offsetPercent = (newPos - i) * 100;
+            elementElements[i].style.transform = `translateX(${offsetPercent}%)`;
+            
+            setTimeout(() => {
+                elementElements[i].innerHTML = `<span>${originalArray[i]}</span><span class="index">${newPos}</span>`;
+            }, 600);
+        }
+
+        setTimeout(() => {
+            document.getElementById('btn-search').disabled = false;
+            document.getElementById('btn-gen').disabled = false;
+            logBox.innerText += `\n\nהמערך המוזז מוכן! כעת הכנס ערך X ולחץ על "2. התחל חיפוש".`;
+        }, 1200);
+    }
+
+    function getVisualElementByRotatedIndex(rotatedIdx) {
+        let origIdx = (rotatedIdx - shiftAmount + ARRAY_SIZE) % ARRAY_SIZE;
+        return elementElements[origIdx];
+    }
+
+    function clearVisualMarkers() {
+        for(let i=0; i<ARRAY_SIZE; i++) {
+            elementElements[i].classList.remove('item-low', 'item-high', 'item-mid', 'item-shift-found');
+        }
+    }
+
+    // פונקציית החיפוש הראשית
+    async function startSearch() {
+        document.getElementById('btn-search').disabled = true;
+        document.getElementById('btn-gen').disabled = true;
+        const logBox = document.getElementById('status');
+        const sumBox = document.getElementById('current-sum-box');
+        const X = parseInt(document.getElementById('targetX').value);
+        
+        logBox.innerText = `=== התחלת שלב א': מציאת גודל ההזזה ===\n`;
+        
+        let foundShift = -1;
+        const lastIdx = ARRAY_SIZE - 1;
+
+        // בדיקת קצוות ראשונית
+        if (rotatedArray[lastIdx] > rotatedArray[0]) {
+            foundShift = 0;
+            logBox.innerText += `💡 בדיקת קצה: האיבר האחרון (${rotatedArray[lastIdx]}) גדול מהראשון (${rotatedArray[0]}) -> לא בוצעה הזזה כלל! (ההזזה היא 0).\n`;
+            getVisualElementByRotatedIndex(0).classList.add('item-shift-found');
+            setTopPointer("Shift (0)", 0, "p-mid");
+            await waitForEnter();
+        } else if (rotatedArray[lastIdx] < rotatedArray[lastIdx - 1]) {
+            foundShift = lastIdx;
+            logBox.innerText += `💡 בדיקת קצה: האיבר האחרון (${rotatedArray[lastIdx]}) קטן משמאלו (${rotatedArray[lastIdx - 1]}) -> הזזה מקסימלית! (ההזזה היא ${lastIdx}).\n`;
+            getVisualElementByRotatedIndex(lastIdx).classList.add('item-shift-found');
+            setTopPointer(`Shift (${lastIdx})`, lastIdx, "p-mid");
+            await waitForEnter();
+        } else {
+            logBox.innerText += `הקצוות לא ענו לתנאי, מתחיל חיפוש בינארי אחר האיבר הקטן ביותר במערך...\n`;
+            let low = 0;
+            let high = lastIdx;
+
+            while (low <= high) {
+                clearVisualMarkers();
+                clearPointers();
+                let mid = Math.floor((low + high) / 2);
+
+                getVisualElementByRotatedIndex(low).classList.add('item-low');
+                getVisualElementByRotatedIndex(high).classList.add('item-high');
+                getVisualElementByRotatedIndex(mid).classList.add('item-mid');
+
+                setTopPointer("Low", low, "p-low");
+                setTopPointer("High", high, "p-high");
+                setTopPointer("Mid", mid, "p-mid");
+
+                logBox.innerText += `[low=${low}, high=${high}, mid=${mid}] ערך ב-mid: ${rotatedArray[mid]}. לחץ Enter להתקדמות...\n`;
+                logBox.scrollTop = logBox.scrollHeight; 
+                
+                await waitForEnter();
+
+                let prev = (mid - 1 + ARRAY_SIZE) % ARRAY_SIZE;
+                let next = (mid + 1) % ARRAY_SIZE;
+
+                if (rotatedArray[mid] < rotatedArray[prev] && rotatedArray[mid] < rotatedArray[next]) {
+                    foundShift = mid;
+                    clearVisualMarkers();
+                    
+                    getVisualElementByRotatedIndex(mid).classList.add('item-shift-found');
+                    
+                    logBox.innerText += `🎯 מצאנו! האיבר במקום המוזז ${mid} (${rotatedArray[mid]}) קטן משני שכניו.\nמידת ההזזה היא: ${foundShift}. האיבר מהבהב כעת בדיוק במיקומו הפיזי.\n\n⌨️ לחץ Enter כדי לאשר ולעבור לשלב ב' (חיפוש הזוג)...\n`;
+                    logBox.scrollTop = logBox.scrollHeight;
+                    
+                    await waitForEnter();
+                    break;
+                }
+
+                if (rotatedArray[mid] > rotatedArray[0]) {
+                    logBox.innerText += `   <- הערך ב-mid גדול מאיבר 0 (${rotatedArray[0]}), מעדכן low = mid + 1\n`;
+                    low = mid + 1;
+                } else {
+                    logBox.innerText += `   -> הערך ב-mid קטן או שווה לאיבר 0 (${rotatedArray[0]}), מעדכן high = mid - 1\n`;
+                    high = mid - 1;
+                }
+            }
+        }
+
+        clearVisualMarkers();
+        clearPointers();
+        if (foundShift === -1) {
+            logBox.innerText += `שגיאה במציאת ההזזה.`;
+            document.getElementById('btn-gen').disabled = false;
+            return;
+        }
+        
+        // -------------------------------------------------------------
+        // שלב ב': חיפוש שני איברים שסכומם X
+        // -------------------------------------------------------------
+        logBox.innerText += `\n=== התחלת שלב ב': חיפוש שני איברים שסכומם X = ${X} ===\n`;
+
+        let l = 0;
+        let r = ARRAY_SIZE - 1;
+        let pairFound = false;
+
+        while (l < r) {
+            clearVisualMarkers();
+            clearPointers();
+            
+            let actualL = (l + foundShift) % ARRAY_SIZE;
+            let actualR = (r + foundShift) % ARRAY_SIZE;
+
+            getVisualElementByRotatedIndex(actualL).classList.add('item-low');
+            getVisualElementByRotatedIndex(actualR).classList.add('item-high');
+
+            setTopPointer(`Left (${l})`, l, "p-left");
+            setTopPointer(`Right (${r})`, r, "p-right");
+
+            setBottomPointer(`sLeft (${actualL})`, actualL, "p-s-left");
+            setBottomPointer(`sRight (${actualR})`, actualR, "p-s-right");
+
+            let currentSum = rotatedArray[actualL] + rotatedArray[actualR];
+            
+            // עדכון רכיב תצוגת הסכום הנוכחי בפנל העליון
+            sumBox.innerText = `סכום נוכחי: ${currentSum}`;
+            
+            logBox.innerText += `🔎 בדיקה:\n`;
+            logBox.innerText += `   • מצביעים מקוריים: l = ${l}, r = ${r}\n`;
+            logBox.innerText += `   • מצביעים מוזזים: shiftedLeft = ${actualL} (ערך: ${rotatedArray[actualL]}), shiftedRight = ${actualR} (ערך: ${rotatedArray[actualR]})\n`;
+            logBox.innerText += `   ➔ סכום נוכחי: ${rotatedArray[actualL]} + ${rotatedArray[actualR]} = ${currentSum} (מבוקש: ${X}). לחץ Enter...\n\n`;
+            logBox.scrollTop = logBox.scrollHeight;
+            
+            await waitForEnter();
+
+            if (currentSum === X) {
+                pairFound = true;
+                clearVisualMarkers();
+                
+                getVisualElementByRotatedIndex(actualL).classList.add('item-match');
+                getVisualElementByRotatedIndex(actualR).classList.add('item-match');
+                
+                // הפיכת התיבה לירוקה ומהבהבת כשיש הצלחה
+                sumBox.classList.add('sum-match');
+                
+                logBox.innerText += `🎉 הצלחה! נמצא זוג קבוע במערך שסכומו הוא ${X}: [${rotatedArray[actualL]} + ${rotatedArray[actualR]} = ${X}]\n`;
+                break;
+            } else if (currentSum < X) {
+                logBox.innerText += `   הסכום ${currentSum} קטן מ-${X} -> מקדם את שמאל המקורי (l++)\n\n`;
+                l++;
+            } else {
+                logBox.innerText += `   הסכום ${currentSum} גדול מ-${X} -> מסיג את ימין המקורי (r--)\n\n`;
+                r--;
+            }
+        }
+
+        if (!pairFound) {
+            clearVisualMarkers();
+            clearPointers();
+            logBox.innerText += `❌ סיום: סרקו את כל האפשרויות ולא נמצא במערך אף זוג איברים שסכומם הוא ${X}.\n`;
+        }
+
+        logBox.scrollTop = logBox.scrollHeight;
+        document.getElementById('btn-gen').disabled = false;
+    }
+
+    window.onload = initSimulation;
+</script>
+
+</body>
+</html>
