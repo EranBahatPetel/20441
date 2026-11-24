@@ -1,0 +1,2287 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>סיבוכיות פעולות במערך ממוין ולא ממוין</title>
+  <style>
+    /* =====================================================================
+       DESIGN TOKENS & RESET
+       ===================================================================== */
+    :root {
+      --bg-page: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-subtle: #f8fafc;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-light: #64748b;
+
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-soft: #eff6ff;
+      --primary-border: #bfdbfe;
+
+      --emerald: #059669;
+      --emerald-hover: #047857;
+      --emerald-soft: #ecfdf5;
+      --emerald-border: #6ee7b7;
+
+      --amber: #d97706;
+      --amber-hover: #b45309;
+      --amber-soft: #fffbeb;
+      --amber-border: #fcd34d;
+
+      --sky-soft: #e0f2fe;
+      --sky-border: #38bdf8;
+
+      --purple-soft: #f3e8ff;
+      --purple-border: #a855f7;
+
+      --rose: #e11d48;
+      --rose-soft: #fff1f2;
+      --rose-border: #fda4af;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Heebo", "Rubik", Arial, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+    }
+
+    .ltr-num {
+      direction: ltr;
+      unicode-bidi: isolate;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* =====================================================================
+       TOP HORIZONTAL CONTROL BAR
+       ===================================================================== */
+    .control-bar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      padding: 12px 18px;
+      width: 100%;
+    }
+
+    .control-bar-inner {
+      max-width: 1460px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px 12px;
+    }
+
+    .brand-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text-main);
+      white-space: nowrap;
+      padding-left: 8px;
+      border-left: 2px solid var(--border);
+      margin-left: 2px;
+    }
+
+    .control-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* Operation Select */
+    .op-select {
+      appearance: none;
+      background-color: var(--bg-subtle);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 5.646a.5.5 0 0 1 .708 0L8 8.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: left 10px center;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px 8px 32px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-main);
+      font-family: inherit;
+      max-width: 340px;
+      min-width: 220px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .op-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    /* Segmented Toggle for Array Type */
+    .segmented-toggle {
+      display: inline-flex;
+      background: var(--bg-page);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .seg-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.84rem;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .seg-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.65);
+    }
+
+    .seg-btn.active-sorted {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(37, 99, 235, 0.35);
+    }
+
+    .seg-btn.active-unsorted {
+      background: #ea580c;
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(234, 88, 12, 0.35);
+    }
+
+    /* Dynamic Input X */
+    .x-input-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--primary-soft);
+      border: 1px solid var(--primary-border);
+      border-radius: var(--radius-sm);
+      padding: 3px 8px;
+    }
+
+    .x-input-wrap.hidden {
+      display: none;
+    }
+
+    .x-input {
+      width: 72px;
+      padding: 5px 8px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-align: center;
+      background: #ffffff;
+      color: var(--text-main);
+    }
+
+    .x-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+
+    .x-input:disabled {
+      background: #e2e8f0;
+      color: var(--text-light);
+      cursor: not-allowed;
+    }
+
+    /* Speed Slider */
+    .speed-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+    }
+
+    .speed-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 96px;
+      height: 6px;
+      border-radius: 999px;
+      background: #cbd5e1;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .speed-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
+      transition: transform 0.15s;
+    }
+
+    .speed-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    .speed-slider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border: none;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+    }
+
+    .speed-val {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-light);
+      min-width: 44px;
+      text-align: center;
+    }
+
+    /* Action Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-family: inherit;
+      font-size: 0.86rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 0.15s, transform 0.1s, opacity 0.15s;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .btn-play {
+      background: var(--emerald);
+      color: #ffffff;
+      min-width: 94px;
+    }
+
+    .btn-play:hover:not(:disabled) {
+      background: var(--emerald-hover);
+    }
+
+    .btn-pause {
+      background: var(--amber);
+      color: #ffffff;
+      min-width: 94px;
+    }
+
+    .btn-pause:hover:not(:disabled) {
+      background: var(--amber-hover);
+    }
+
+    .btn-reset {
+      background: #475569;
+      color: #ffffff;
+    }
+
+    .btn-reset:hover:not(:disabled) {
+      background: #334155;
+    }
+
+    .btn-new {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      border: 1px solid var(--border-strong);
+    }
+
+    .btn-new:hover:not(:disabled) {
+      background: #e2e8f0;
+    }
+
+    /* =====================================================================
+       MAIN CONTAINER & EMPTY PROMPT
+       ===================================================================== */
+    .main-wrap {
+      flex: 1;
+      width: 100%;
+      max-width: 1460px;
+      margin: 0 auto;
+      padding: 18px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .prompt-card {
+      background: var(--bg-card);
+      border: 2px dashed var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 44px 24px;
+      text-align: center;
+      max-width: 720px;
+      margin: 28px auto;
+      width: 100%;
+    }
+
+    .prompt-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+
+    .prompt-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .prompt-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 18px;
+    }
+
+    .prompt-pills {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--bg-page);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .pill.done {
+      background: var(--emerald-soft);
+      color: var(--emerald-hover);
+      border-color: var(--emerald-border);
+    }
+
+    /* Inline Message Box (replaces alert()) */
+    .message-box {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--rose-soft);
+      color: var(--rose);
+      border: 1px solid var(--rose-border);
+    }
+
+    /* =====================================================================
+       ALGORITHM INFO STRIP
+       ===================================================================== */
+    .info-strip {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .info-main {
+      flex: 1 1 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .info-header-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .type-badge {
+      font-size: 0.78rem;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+
+    .type-badge.sorted {
+      background: var(--primary-soft);
+      color: var(--primary-hover);
+      border: 1px solid var(--primary-border);
+    }
+
+    .type-badge.unsorted {
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fdba74;
+    }
+
+    .status-badge {
+      font-size: 0.76rem;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: var(--bg-page);
+      color: var(--text-muted);
+      border: 1px solid var(--border-strong);
+    }
+
+    .status-badge.running {
+      background: var(--emerald-soft);
+      color: var(--emerald-hover);
+      border-color: var(--emerald-border);
+    }
+
+    .status-badge.paused {
+      background: var(--amber-soft);
+      color: var(--amber-hover);
+      border-color: var(--amber-border);
+    }
+
+    .status-badge.done {
+      background: var(--primary-soft);
+      color: var(--primary-hover);
+      border-color: var(--primary-border);
+    }
+
+    .op-heading {
+      font-size: 1.08rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .algo-desc {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .info-metrics {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .metric-box {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 8px 14px;
+      text-align: center;
+      min-width: 96px;
+    }
+
+    .metric-box.complexity {
+      background: #0f172a;
+      border-color: #0f172a;
+      color: #ffffff;
+    }
+
+    .metric-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-light);
+      display: block;
+    }
+
+    .metric-box.complexity .metric-label {
+      color: #94a3b8;
+    }
+
+    .metric-value {
+      font-size: 1.2rem;
+      font-weight: 800;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .metric-box.complexity .metric-value {
+      color: #34d399;
+    }
+
+    /* =====================================================================
+       ARRAY VISUALIZATION STAGE (SINGLE HORIZONTAL ROW, LTR)
+       ===================================================================== */
+    .stage-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stage-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stage-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stage-title {
+      font-size: 0.96rem;
+      font-weight: 800;
+    }
+
+    .size-pill {
+      font-size: 0.76rem;
+      font-weight: 700;
+      background: var(--bg-page);
+      color: var(--text-muted);
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+
+    .dir-hint {
+      font-size: 0.78rem;
+      color: var(--text-light);
+      font-weight: 600;
+    }
+
+    /* CRITICAL: Single Horizontal Row, Left-to-Right (index 0 on FAR LEFT) */
+    .array-scroll-wrap {
+      width: 100%;
+      overflow-x: auto;
+      padding: 28px 2px 8px;
+      direction: ltr;
+    }
+
+    .array-row {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      direction: ltr;
+      align-items: flex-end;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .cell-wrapper {
+      flex: 1 1 0;
+      min-width: 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .pointer-stack {
+      position: absolute;
+      bottom: calc(100% + 5px);
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .ptr-badge {
+      background: #1e293b;
+      color: #ffffff;
+      font-size: 0.66rem;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      white-space: nowrap;
+      line-height: 1.3;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .ptr-badge.ptr-found {
+      background: var(--emerald);
+    }
+
+    .ptr-badge.ptr-active {
+      background: var(--amber);
+    }
+
+    .ptr-badge.ptr-pointer {
+      background: var(--primary);
+    }
+
+    .cell-box {
+      width: 100%;
+      height: 52px;
+      border-radius: 10px;
+      border: 2px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 800;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+
+    .cell-index {
+      margin-top: 5px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-light);
+    }
+
+    /* Cell Visual States */
+    .cell-box.state-active {
+      background: var(--amber-soft);
+      border-color: var(--amber);
+      color: #78350f;
+      transform: translateY(-4px);
+      box-shadow: 0 4px 10px rgba(217, 119, 6, 0.22);
+    }
+
+    .cell-box.state-pointer {
+      background: var(--sky-soft);
+      border-color: var(--sky-border);
+      color: #0c4a6e;
+    }
+
+    .cell-box.state-found {
+      background: var(--emerald-soft);
+      border-color: var(--emerald);
+      color: #064e3b;
+      transform: translateY(-4px);
+      box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);
+    }
+
+    .cell-box.state-shifted {
+      background: var(--purple-soft);
+      border-color: var(--purple-border);
+      color: #581c87;
+    }
+
+    .cell-box.state-dimmed {
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+      color: #94a3b8;
+      opacity: 0.45;
+    }
+
+    .cell-box.state-empty {
+      background: #f8fafc;
+      border: 2px dashed #94a3b8;
+      color: #94a3b8;
+    }
+
+    /* Legend Row */
+    .legend-row {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      border: 1.5px solid transparent;
+    }
+
+    /* =====================================================================
+       DEDICATED 7-SLOT AUXILIARY ROW (FOR OP 2 UNSORTED)
+       ===================================================================== */
+    .top7-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .top7-title {
+      font-size: 0.86rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 10px;
+    }
+
+    .top7-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(70px, 1fr));
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .top7-slot {
+      background: var(--bg-subtle);
+      border: 1.5px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 8px 6px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .top7-slot.target-slot {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .top7-slot.updated-slot {
+      border-color: var(--amber);
+      background: var(--amber-soft);
+      transform: translateY(-2px);
+    }
+
+    .top7-slot.final-slot {
+      border-color: var(--emerald);
+      background: var(--emerald-soft);
+    }
+
+    .top7-rank {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      display: block;
+    }
+
+    .top7-val {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text-main);
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* =====================================================================
+       LIVE EXECUTION STATUS & AUXILIARY VARIABLES
+       ===================================================================== */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 16px;
+    }
+
+    .panel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .panel-label {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--text-light);
+      letter-spacing: 0.02em;
+    }
+
+    .narration-text {
+      font-size: 0.96rem;
+      font-weight: 600;
+      color: var(--text-main);
+      min-height: 2.6em;
+    }
+
+    .result-banner {
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.94rem;
+      font-weight: 800;
+      border: 1.5px solid transparent;
+    }
+
+    .result-banner.success {
+      background: var(--emerald-soft);
+      border-color: var(--emerald-border);
+      color: #065f46;
+    }
+
+    .result-banner.not-found {
+      background: var(--rose-soft);
+      border-color: var(--rose-border);
+      color: #9f1239;
+    }
+
+    .vars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 8px;
+    }
+
+    .var-item {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .var-item.highlight {
+      background: var(--amber-soft);
+      border-color: var(--amber-border);
+    }
+
+    .var-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .var-val {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .vars-empty {
+      font-size: 0.84rem;
+      color: var(--text-light);
+      font-style: italic;
+    }
+
+    /* =====================================================================
+       SUBTLE RULES FOOTER
+       ===================================================================== */
+    .rules-footer {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      padding: 12px 20px;
+      margin-top: auto;
+    }
+
+    .rules-footer-inner {
+      max-width: 1460px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px 24px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .rule-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rule-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .rule-dot.warn {
+      background: #ea580c;
+    }
+
+    /* =====================================================================
+       RESPONSIVE ADJUSTMENTS
+       ===================================================================== */
+    @media (max-width: 900px) {
+      .brand-title {
+        display: none;
+      }
+      .bottom-grid {
+        grid-template-columns: 1fr;
+      }
+      .top7-grid {
+        grid-template-columns: repeat(7, minmax(76px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =====================================================================
+       1. TOP HORIZONTAL CONTROL BAR
+       ===================================================================== -->
+  <header class="control-bar">
+    <div class="control-bar-inner">
+      <div class="brand-title">פעולות במערך</div>
+
+      <!-- Operation Selector -->
+      <div class="control-group">
+        <select id="op-select" class="op-select" aria-label="בחירת פעולה" onchange="onOperationChange()">
+          <option value="">-- בחר פעולה --</option>
+        </select>
+      </div>
+
+      <!-- Array Type Segmented Toggle -->
+      <div class="segmented-toggle" role="group" aria-label="בחירת סוג מערך">
+        <button type="button" id="btn-type-sorted" class="seg-btn" onclick="selectArrayType('sorted')">מערך ממוין</button>
+        <button type="button" id="btn-type-unsorted" class="seg-btn" onclick="selectArrayType('unsorted')">מערך לא ממוין</button>
+      </div>
+
+      <!-- Dynamic Input X (Only for Ops 1, 3, 5) -->
+      <div id="x-input-wrap" class="x-input-wrap hidden">
+        <label for="input-x" class="control-label">ערך X:</label>
+        <input type="number" id="input-x" class="x-input ltr-num" min="1" max="999" placeholder="מספר" />
+      </div>
+
+      <!-- Speed Slider -->
+      <div class="speed-box" title="מהירות הרצת האלגוריתם">
+        <span class="control-label">מהירות</span>
+        <input type="range" id="speed-slider" class="speed-slider" min="1" max="100" value="55" oninput="updateSpeedLabel()" aria-label="מהירות" />
+        <span id="speed-val" class="speed-val ltr-num">340ms</span>
+      </div>
+
+      <!-- Play / Pause Button -->
+      <button type="button" id="btn-play-pause" class="btn btn-play" onclick="onPlayPauseClick()" disabled>
+        <span id="btn-play-icon" style="display:inline-flex;">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+        </span>
+        <span id="btn-play-text">הפעל</span>
+      </button>
+
+      <!-- Reset Current Array Button -->
+      <button type="button" id="btn-reset" class="btn btn-reset" onclick="resetCurrentArray()" disabled title="הצג שוב את המערך הנוכחי והמתן להתחלה">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        <span>איתחול</span>
+      </button>
+
+      <!-- Regenerate New Array Button -->
+      <button type="button" id="btn-new-array" class="btn btn-new" onclick="generateFreshArray()" disabled title="צור 20 מספרים חיוביים חדשים">
+        <span>מערך חדש</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- =====================================================================
+       2. MAIN WORKSPACE
+       ===================================================================== -->
+  <main class="main-wrap">
+
+    <!-- Initial Prompt (shown until BOTH operation and array type are chosen) -->
+    <section id="empty-prompt" class="prompt-card">
+      <div class="prompt-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18"/>
+          <path d="M9 21V9"/>
+        </svg>
+      </div>
+      <h2 class="prompt-title">בחר פעולה וסוג מערך בסרגל העליון כדי להתחיל</h2>
+      <p class="prompt-desc">
+        מיד לאחר בחירת אחת מ-7 הפעולות ובחירה בין מערך ממוין למערך לא ממוין, יוצג כאן מערך בן 20 מספרים חיוביים בשורה אחת משמאל לימין.
+      </p>
+      <div class="prompt-pills">
+        <span id="pill-op" class="pill">1. בחירת פעולה</span>
+        <span id="pill-type" class="pill">2. בחירת סוג מערך</span>
+      </div>
+    </section>
+
+    <!-- Active Visualizer Workspace -->
+    <div id="workspace" class="hidden" style="display:flex; flex-direction:column; gap:16px;">
+
+      <!-- Inline Validation Message Box -->
+      <div id="message-box" class="message-box hidden" role="alert"></div>
+
+      <!-- Compact Algorithm Info Strip -->
+      <section class="info-strip">
+        <div class="info-main">
+          <div class="info-header-row">
+            <span id="info-type-badge" class="type-badge sorted">מערך ממוין</span>
+            <span id="info-status-badge" class="status-badge">מוכן</span>
+            <h1 id="info-op-title" class="op-heading">שם הפעולה</h1>
+          </div>
+          <p id="info-algo-desc" class="algo-desc">תיאור האלגוריתם היעיל ביותר...</p>
+        </div>
+
+        <div class="info-metrics">
+          <div class="metric-box">
+            <span class="metric-label">צעדים / השוואות</span>
+            <span id="step-counter" class="metric-value ltr-num">0</span>
+          </div>
+          <div class="metric-box complexity">
+            <span class="metric-label">סיבוכיות זמן</span>
+            <span id="info-complexity" class="metric-value ltr-num">O(n)</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Single-Row LTR Array Visualization -->
+      <section class="stage-card">
+        <div class="stage-header">
+          <div class="stage-title-group">
+            <h2 class="stage-title">המערך</h2>
+            <span id="array-size-pill" class="size-pill">20 איברים</span>
+          </div>
+          <span class="dir-hint">משמאל לימין: אינדקס <span class="ltr-num">0</span> בצד שמאל ← אינדקס אחרון בצד ימין</span>
+        </div>
+
+        <div class="array-scroll-wrap">
+          <div id="array-row" class="array-row">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <div class="legend-row">
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--amber-soft); border-color:var(--amber);"></span> נבדק / מושווה כעת</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--sky-soft); border-color:var(--sky-border);"></span> מצביע / גבול</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--emerald-soft); border-color:var(--emerald);"></span> נמצא / נבחר</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--purple-soft); border-color:var(--purple-border);"></span> הוזז / הועבר</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:#f1f5f9; border-color:#cbd5e1; opacity:0.6;"></span> מחוץ לטווח</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:#f8fafc; border:1.5px dashed #94a3b8;"></span> מקום פנוי</span>
+        </div>
+      </section>
+
+      <!-- Dedicated 7-Variable Row (Visible ONLY for Op 2 Unsorted) -->
+      <section id="top7-card" class="top7-card hidden">
+        <div class="top7-title">תחזוקת 7 המשתנים עבור שבעת המספרים הגדולים ביותר (מקום 4 ומקום 7 מודגשים):</div>
+        <div id="top7-grid" class="top7-grid"></div>
+      </section>
+
+      <!-- Live Narration & Auxiliary Variables -->
+      <section class="bottom-grid">
+        <div class="panel-card">
+          <span class="panel-label">מהלך הריצה והסבר הצעד הנוכחי</span>
+          <p id="narration-text" class="narration-text">מוכן להרצה. לחץ על "הפעל" כדי להתחיל.</p>
+          <div id="result-banner" class="result-banner hidden"></div>
+        </div>
+
+        <div class="panel-card">
+          <span class="panel-label">משתני עזר</span>
+          <div id="vars-container" class="vars-grid">
+            <span class="vars-empty">יוצגו במהלך ריצת האלגוריתם...</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- =====================================================================
+       3. SUBTLE RULES FOOTER
+       ===================================================================== -->
+  <footer class="rules-footer">
+    <div class="rules-footer-inner">
+      <span class="rule-note"><span class="rule-dot"></span> המערך הממוין חייב להישאר ממוין בתום הפעולה.</span>
+      <span class="rule-note"><span class="rule-dot warn"></span> את המערך הלא-ממוין אסור למיין כפעולת עזר גם אם הדבר משתלם מבחינת הסיבוכיות.</span>
+    </div>
+  </footer>
+
+  <!-- =====================================================================
+       4. APPLICATION LOGIC & ASYNC PAUSE/RESUME EXECUTION ENGINE
+       ===================================================================== -->
+  <script>
+    // -----------------------------------------------------------------------
+    // 1. ALL 7 OPERATIONS DATA (Exact Order, Big-O & Hebrew Descriptions)
+    // -----------------------------------------------------------------------
+    const OPERATIONS = [
+      {
+        id: 1,
+        title: "הכנסת איבר למערך",
+        requiresInput: true,
+        sorted: {
+          complexity: "O(n)",
+          description: "O(log n) כדי למצוא את המקום המתאים, O(n) כדי להזיז את שאר האיברים."
+        },
+        unsorted: {
+          complexity: "O(1)",
+          description: "בהנחה שיש מקום פנוי בסוף המערך."
+        }
+      },
+      {
+        id: 2,
+        title: "חישוב סכום האיבר הרביעי בגודלו עם האיבר השביעי בגודלו",
+        requiresInput: false,
+        sorted: {
+          complexity: "O(1)",
+          description: "גישה ישירה אל המקומות הרביעי והשביעי מסוף המערך."
+        },
+        unsorted: {
+          complexity: "O(n)",
+          description: "מעבר על כל המערך ומציאת שבעת המספרים הגדולים בו בעזרת תחזוקת שבעה משתנים."
+        }
+      },
+      {
+        id: 3,
+        title: "בדיקה אם איבר x נמצא במערך",
+        requiresInput: true,
+        sorted: {
+          complexity: "O(log n)",
+          description: "חיפוש בינארי."
+        },
+        unsorted: {
+          complexity: "O(n)",
+          description: "חיפוש לינארי."
+        }
+      },
+      {
+        id: 4,
+        title: "הוצאת המינימום מהמערך",
+        requiresInput: false,
+        sorted: {
+          complexity: "O(n)",
+          description: "מציאתו – מיידית, במקום הראשון במערך. אך הוצאתו דורשת הזזת כל שאר איברי המערך."
+        },
+        unsorted: {
+          complexity: "O(n)",
+          description: "מציאתו דורשת חיפוש לינארי, ולאחר שנמצא אפשר להעביר למקום שהתפנה את האיבר האחרון במערך."
+        }
+      },
+      {
+        id: 5,
+        title: "בדיקה אם יש זוג איברים במערך שסכומם שווה למספר כלשהו x",
+        requiresInput: true,
+        sorted: {
+          complexity: "O(n)",
+          description: "חיפוש משני צידי המערך."
+        },
+        unsorted: {
+          complexity: "O(n²)",
+          description: "לולאה מקוננת הבודקת את כל הזוגות האפשריים."
+        }
+      },
+      {
+        id: 6,
+        title: "בדיקה מה ההפרש הגדול ביותר בין שני איברים כלשהם במערך",
+        requiresInput: false,
+        sorted: {
+          complexity: "O(1)",
+          description: "ההפרש בין שני האיברים הקיצוניים במערך."
+        },
+        unsorted: {
+          complexity: "O(n)",
+          description: "מעבר אחד על כל המערך למציאת מינימום ומקסימום, ואז ההפרש ביניהם."
+        }
+      },
+      {
+        id: 7,
+        title: "בדיקה מה ההפרש הקטן ביותר בין שני איברים כלשהם במערך",
+        requiresInput: false,
+        sorted: {
+          complexity: "O(n)",
+          description: "מעבר על כל המערך ומציאת ההפרש המינימלי בין כל שני איברים סמוכים."
+        },
+        unsorted: {
+          complexity: "O(n²)",
+          description: "לולאה מקוננת הבודקת את כל הזוגות האפשריים."
+        }
+      }
+    ];
+
+    // SVG Icons for Play and Pause states
+    const ICON_PLAY = '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>';
+    const ICON_PAUSE = '<svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>';
+
+    // -----------------------------------------------------------------------
+    // 2. APPLICATION & EXECUTION STATE MACHINE
+    // -----------------------------------------------------------------------
+    const state = {
+      selectedOpId: null,       // 1..7 or null
+      selectedType: null,       // 'sorted' | 'unsorted' | null
+      initialArray: [],         // Original 20 positive integers for Reset
+      workingArray: [],         // Current array rendered in UI
+      cellStates: {},           // index -> { role, badges: [{text, cls}] }
+      stepsCount: 0,
+
+      // Execution / Pause / Resume State Machine
+      isRunning: false,
+      isPaused: false,
+      isCompleted: false,
+      runId: 0,                 // Incremented on abort/reset to invalidate active runs
+      pauseResolver: null       // Resolve callback for awaiting resume
+    };
+
+    // -----------------------------------------------------------------------
+    // 3. INITIALIZATION
+    // -----------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      const select = document.getElementById('op-select');
+      OPERATIONS.forEach((op, idx) => {
+        const opt = document.createElement('option');
+        opt.value = op.id;
+        opt.textContent = `${idx + 1}. ${op.title}`;
+        select.appendChild(opt);
+      });
+      updateSpeedLabel();
+    });
+
+    // -----------------------------------------------------------------------
+    // 4. CONTROL BAR SELECTION HANDLERS
+    // -----------------------------------------------------------------------
+    function onOperationChange() {
+      abortExecution();
+      const val = document.getElementById('op-select').value;
+      state.selectedOpId = val ? parseInt(val, 10) : null;
+      syncSelectionUI(false);
+    }
+
+    function selectArrayType(type) {
+      const typeChanged = state.selectedType !== type;
+      abortExecution();
+      state.selectedType = type;
+
+      document.getElementById('btn-type-sorted').className =
+        'seg-btn' + (type === 'sorted' ? ' active-sorted' : '');
+      document.getElementById('btn-type-unsorted').className =
+        'seg-btn' + (type === 'unsorted' ? ' active-unsorted' : '');
+
+      syncSelectionUI(typeChanged);
+    }
+
+    function syncSelectionUI(forceNewArray) {
+      // Update checklist pills in empty prompt
+      const pillOp = document.getElementById('pill-op');
+      const pillType = document.getElementById('pill-type');
+      pillOp.classList.toggle('done', state.selectedOpId !== null);
+      pillType.classList.toggle('done', state.selectedType !== null);
+
+      // Show/hide X input field based on selected operation
+      const op = OPERATIONS.find(o => o.id === state.selectedOpId);
+      const xWrap = document.getElementById('x-input-wrap');
+      if (op && op.requiresInput) {
+        xWrap.classList.remove('hidden');
+      } else {
+        xWrap.classList.add('hidden');
+      }
+
+      const ready = state.selectedOpId !== null && state.selectedType !== null;
+      document.getElementById('btn-play-pause').disabled = !ready;
+      document.getElementById('btn-reset').disabled = !ready;
+      document.getElementById('btn-new-array').disabled = !ready;
+
+      if (!ready) {
+        document.getElementById('empty-prompt').classList.remove('hidden');
+        document.getElementById('workspace').classList.add('hidden');
+        return;
+      }
+
+      if (forceNewArray || state.initialArray.length === 0) {
+        generateFreshArray();
+      } else {
+        resetCurrentArray();
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 5. ARRAY GENERATION & RESET
+    // -----------------------------------------------------------------------
+    function generateFreshArray() {
+      if (state.selectedType === null) return;
+      abortExecution();
+
+      // Generate 20 distinct positive integers between 2 and 98
+      const set = new Set();
+      while (set.size < 20) {
+        set.add(Math.floor(Math.random() * 97) + 2);
+      }
+      const nums = Array.from(set);
+      if (state.selectedType === 'sorted') {
+        nums.sort((a, b) => a - b);
+      } else {
+        for (let i = nums.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [nums[i], nums[j]] = [nums[j], nums[i]];
+        }
+      }
+
+      state.initialArray = nums;
+      resetCurrentArray();
+    }
+
+    function resetCurrentArray() {
+      abortExecution();
+      if (state.selectedOpId === null || state.selectedType === null) return;
+
+      document.getElementById('empty-prompt').classList.add('hidden');
+      document.getElementById('workspace').classList.remove('hidden');
+
+      const op = OPERATIONS.find(o => o.id === state.selectedOpId);
+      const spec = op[state.selectedType];
+
+      // Update info strip
+      const typeBadge = document.getElementById('info-type-badge');
+      typeBadge.textContent = state.selectedType === 'sorted' ? 'מערך ממוין' : 'מערך לא ממוין';
+      typeBadge.className = 'type-badge ' + state.selectedType;
+
+      document.getElementById('info-op-title').textContent = op.title;
+      document.getElementById('info-algo-desc').textContent = spec.description;
+      document.getElementById('info-complexity').textContent = spec.complexity;
+
+      // Restore exact initial 20-element array
+      state.workingArray = [...state.initialArray];
+      state.cellStates = {};
+      state.stepsCount = 0;
+      state.isCompleted = false;
+
+      if (op.id === 1) {
+        // Extra empty slot at index 20 for insertion
+        state.workingArray.push(null);
+        state.cellStates[20] = { role: 'empty', badges: [{ text: 'פנוי', cls: '' }] };
+        document.getElementById('array-size-pill').textContent = '20 איברים + מקום פנוי';
+      } else {
+        document.getElementById('array-size-pill').textContent = '20 איברים';
+      }
+
+      // Dedicated 7-slot row for Op 2 Unsorted
+      const top7Card = document.getElementById('top7-card');
+      if (op.id === 2 && state.selectedType === 'unsorted') {
+        top7Card.classList.remove('hidden');
+        renderTop7Slots(Array(7).fill(null), -1, false);
+      } else {
+        top7Card.classList.add('hidden');
+      }
+
+      document.getElementById('step-counter').textContent = '0';
+      document.getElementById('narration-text').textContent = op.requiresInput
+        ? 'הכנס מספר חיובי בשדה X למעלה ולחץ על "הפעל" כדי להתחיל.'
+        : 'מוכן להרצה. לחץ על "הפעל" כדי להריץ את האלגוריתם צעד אחר צעד.';
+
+      document.getElementById('result-banner').classList.add('hidden');
+      hideMessage();
+      renderVariables([]);
+      setStatusBadge('מוכן', '');
+      updatePlayPauseButton();
+      renderArray();
+    }
+
+    // -----------------------------------------------------------------------
+    // 6. PAUSE / RESUME / ABORT ENGINE
+    // -----------------------------------------------------------------------
+    function updatePlayPauseButton() {
+      const btn = document.getElementById('btn-play-pause');
+      const iconSpan = document.getElementById('btn-play-icon');
+      const textSpan = document.getElementById('btn-play-text');
+
+      if (state.isRunning && !state.isPaused) {
+        btn.className = 'btn btn-pause';
+        iconSpan.innerHTML = ICON_PAUSE;
+        textSpan.textContent = 'השהה';
+      } else {
+        btn.className = 'btn btn-play';
+        iconSpan.innerHTML = ICON_PLAY;
+        textSpan.textContent = 'הפעל';
+      }
+    }
+
+    function setStatusBadge(text, mode) {
+      const badge = document.getElementById('info-status-badge');
+      badge.textContent = text;
+      badge.className = 'status-badge' + (mode ? ' ' + mode : '');
+    }
+
+    function abortExecution() {
+      state.runId++;
+      state.isRunning = false;
+      state.isPaused = false;
+      state.isCompleted = false;
+
+      // Wake up any paused coroutine so it immediately catches ABORTED and exits
+      if (state.pauseResolver) {
+        const res = state.pauseResolver;
+        state.pauseResolver = null;
+        res();
+      }
+
+      const xInput = document.getElementById('input-x');
+      if (xInput) xInput.disabled = false;
+
+      updatePlayPauseButton();
+    }
+
+    function onPlayPauseClick() {
+      if (state.selectedOpId === null || state.selectedType === null) return;
+
+      // Case 1: Currently running -> Pause immediately
+      if (state.isRunning && !state.isPaused) {
+        state.isPaused = true;
+        setStatusBadge('מושהה', 'paused');
+        updatePlayPauseButton();
+        return;
+      }
+
+      // Case 2: Currently paused -> Resume from exact step
+      if (state.isRunning && state.isPaused) {
+        state.isPaused = false;
+        setStatusBadge('רץ...', 'running');
+        updatePlayPauseButton();
+        if (state.pauseResolver) {
+          const res = state.pauseResolver;
+          state.pauseResolver = null;
+          res();
+        }
+        return;
+      }
+
+      // Case 3: Idle or Completed -> Start fresh execution
+      startExecution();
+    }
+
+    function getStepDelayMs() {
+      const val = Number(document.getElementById('speed-slider').value);
+      const minMs = 40;
+      const maxMs = 1200;
+      const ratio = (100 - val) / 99;
+      return Math.round(minMs + (maxMs - minMs) * Math.pow(ratio, 1.5));
+    }
+
+    function updateSpeedLabel() {
+      document.getElementById('speed-val').textContent = `${getStepDelayMs()}ms`;
+    }
+
+    /**
+     * Suspends execution for the current speed duration, while seamlessly
+     * supporting instant Pause/Resume and immediate cancellation via runId.
+     */
+    async function waitStep(token) {
+      if (token !== state.runId) throw new Error('ABORTED');
+
+      // Check if paused before starting delay
+      if (state.isPaused) {
+        await new Promise(resolve => { state.pauseResolver = resolve; });
+        if (token !== state.runId) throw new Error('ABORTED');
+      }
+
+      // Sleep in small slices or full delay, checking pause/abort
+      const delay = getStepDelayMs();
+      await new Promise(resolve => setTimeout(resolve, delay));
+      if (token !== state.runId) throw new Error('ABORTED');
+
+      // If user clicked "השהה" during the delay, freeze right here until resumed
+      while (state.isPaused) {
+        await new Promise(resolve => { state.pauseResolver = resolve; });
+        if (token !== state.runId) throw new Error('ABORTED');
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 7. UI RENDERING HELPERS
+    // -----------------------------------------------------------------------
+    function renderArray() {
+      const row = document.getElementById('array-row');
+      row.innerHTML = '';
+
+      state.workingArray.forEach((val, idx) => {
+        const info = state.cellStates[idx] || { role: 'default', badges: [] };
+        const wrap = document.createElement('div');
+        wrap.className = 'cell-wrapper';
+
+        let badgesHtml = '';
+        if (info.badges && info.badges.length > 0) {
+          badgesHtml = `<div class="pointer-stack">${info.badges
+            .map(b => `<span class="ptr-badge ${b.cls || ''}">${b.text}</span>`)
+            .join('')}</div>`;
+        }
+
+        const roleClass = val === null ? 'state-empty' : (info.role !== 'default' ? `state-${info.role}` : '');
+        wrap.innerHTML = `
+          ${badgesHtml}
+          <div class="cell-box ltr-num ${roleClass}">${val !== null ? val : '—'}</div>
+          <div class="cell-index ltr-num">${idx}</div>
+        `;
+        row.appendChild(wrap);
+      });
+    }
+
+    function renderTop7Slots(arr7, updatedIdx = -1, isFinal = false) {
+      const grid = document.getElementById('top7-grid');
+      grid.innerHTML = arr7.map((val, idx) => {
+        const isTarget = idx === 3 || idx === 6;
+        let cls = 'top7-slot';
+        if (isFinal && isTarget) cls += ' final-slot';
+        else if (idx === updatedIdx) cls += ' updated-slot';
+        else if (isTarget) cls += ' target-slot';
+
+        const label = idx === 3 ? '#4 (רביעי)' : idx === 6 ? '#7 (שביעי)' : `#${idx + 1}`;
+        return `
+          <div class="${cls}">
+            <span class="top7-rank">${label}</span>
+            <span class="top7-val ltr-num">${val !== null && val !== -Infinity ? val : '—'}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function setNarration(text, countStep = false) {
+      if (countStep) {
+        state.stepsCount++;
+        document.getElementById('step-counter').textContent = String(state.stepsCount);
+      }
+      document.getElementById('narration-text').textContent = text;
+    }
+
+    function renderVariables(list) {
+      const container = document.getElementById('vars-container');
+      if (!list || list.length === 0) {
+        container.innerHTML = '<span class="vars-empty">יוצגו במהלך ריצת האלגוריתם...</span>';
+        return;
+      }
+      container.innerHTML = list.map(v => `
+        <div class="var-item ${v.highlight ? 'highlight' : ''}">
+          <span class="var-name">${v.name}</span>
+          <span class="var-val ltr-num">${v.value}</span>
+        </div>
+      `).join('');
+    }
+
+    function showResult(text, type = 'success') {
+      const banner = document.getElementById('result-banner');
+      banner.textContent = text;
+      banner.className = `result-banner ${type}`;
+    }
+
+    function showMessage(text) {
+      const box = document.getElementById('message-box');
+      box.textContent = text;
+      box.classList.remove('hidden');
+    }
+
+    function hideMessage() {
+      document.getElementById('message-box').classList.add('hidden');
+    }
+
+    // -----------------------------------------------------------------------
+    // 8. EXECUTION DISPATCHER
+    // -----------------------------------------------------------------------
+    async function startExecution() {
+      const op = OPERATIONS.find(o => o.id === state.selectedOpId);
+      let xVal = null;
+
+      if (op.requiresInput) {
+        const raw = document.getElementById('input-x').value.trim();
+        const parsed = Number(raw);
+        if (!raw || isNaN(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
+          showMessage('אנא הכנס מספר שלם וחיובי בשדה X לפני הלחיצה על "הפעל".');
+          document.getElementById('input-x').focus();
+          return;
+        }
+        xVal = parsed;
+      }
+
+      // Reset cleanly to initial array before running
+      resetCurrentArray();
+      hideMessage();
+
+      state.isRunning = true;
+      state.isPaused = false;
+      state.isCompleted = false;
+      const token = ++state.runId;
+
+      if (op.requiresInput) {
+        document.getElementById('input-x').disabled = true;
+      }
+      setStatusBadge('רץ...', 'running');
+      updatePlayPauseButton();
+
+      try {
+        const isSorted = state.selectedType === 'sorted';
+        switch (op.id) {
+          case 1: await runOp1_Insert(isSorted, xVal, token); break;
+          case 2: await runOp2_Sum4thAnd7th(isSorted, token); break;
+          case 3: await runOp3_SearchX(isSorted, xVal, token); break;
+          case 4: await runOp4_ExtractMin(isSorted, token); break;
+          case 5: await runOp5_TwoSum(isSorted, xVal, token); break;
+          case 6: await runOp6_MaxDiff(isSorted, token); break;
+          case 7: await runOp7_MinDiff(isSorted, token); break;
+        }
+
+        if (token === state.runId) {
+          state.isCompleted = true;
+          setStatusBadge('הושלם', 'done');
+        }
+      } catch (err) {
+        if (err.message !== 'ABORTED') {
+          console.error(err);
+        }
+      } finally {
+        if (token === state.runId) {
+          state.isRunning = false;
+          state.isPaused = false;
+          if (op.requiresInput) {
+            document.getElementById('input-x').disabled = false;
+          }
+          updatePlayPauseButton();
+        }
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 9. THE 7 STEP-BY-STEP ALGORITHMS
+    // -----------------------------------------------------------------------
+
+    // OP 1: הכנסת איבר למערך
+    async function runOp1_Insert(isSorted, x, token) {
+      if (!isSorted) {
+        // Unsorted: O(1) directly into free slot at index 20
+        state.cellStates = { 20: { role: 'active', badges: [{ text: 'new', cls: 'ptr-active' }] } };
+        renderVariables([{ name: 'x להכנסה', value: x }, { name: 'מיקום פנוי', value: 20 }]);
+        setNarration(`ניגשים ישירות למקום הפנוי בסוף המערך (אינדקס 20) ומכניסים את ${x}.`, true);
+        renderArray();
+        await waitStep(token);
+
+        state.workingArray[20] = x;
+        state.cellStates = { 20: { role: 'found', badges: [{ text: 'הוכנס', cls: 'ptr-found' }] } };
+        document.getElementById('array-size-pill').textContent = '21 איברים';
+        renderArray();
+        setNarration(`האיבר ${x} הוכנס לסוף המערך בפעולה אחת — O(1).`, false);
+        showResult(`האיבר ${x} הוכנס לאינדקס 20 בזמן קבוע O(1).`, 'success');
+        return;
+      }
+
+      // Sorted: Binary Search O(log n) + Shift Right O(n)
+      let low = 0;
+      let high = 19;
+
+      setNarration(`שלב א' O(log n): חיפוש בינארי למציאת מיקום ההכנסה המתאים עבור ${x}.`, false);
+      renderVariables([{ name: 'x להכנסה', value: x }, { name: 'L', value: low }, { name: 'R', value: high }]);
+      await waitStep(token);
+
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        state.cellStates = { 20: { role: 'empty', badges: [{ text: 'פנוי', cls: '' }] } };
+        for (let i = 0; i < 20; i++) {
+          if (i < low || i > high) state.cellStates[i] = { role: 'dimmed', badges: [] };
+        }
+        state.cellStates[low] = { role: 'pointer', badges: [{ text: 'L', cls: 'ptr-pointer' }] };
+        state.cellStates[high] = {
+          role: 'pointer',
+          badges: low === high
+            ? [{ text: 'L, R', cls: 'ptr-pointer' }]
+            : [{ text: 'R', cls: 'ptr-pointer' }]
+        };
+        state.cellStates[mid] = { role: 'active', badges: [{ text: 'mid', cls: 'ptr-active' }] };
+
+        renderVariables([
+          { name: 'x להכנסה', value: x },
+          { name: 'L / R', value: `${low} / ${high}` },
+          { name: 'mid [ערך]', value: `${mid} [${state.workingArray[mid]}]`, highlight: true }
+        ]);
+        setNarration(`בודקים mid=${mid} (ערך ${state.workingArray[mid]}) מול x=${x}.`, true);
+        renderArray();
+        await waitStep(token);
+
+        if (state.workingArray[mid] < x) low = mid + 1;
+        else high = mid - 1;
+      }
+
+      const insertIdx = low;
+      state.cellStates = { 20: { role: 'empty', badges: [{ text: 'פנוי', cls: '' }] } };
+      state.cellStates[insertIdx] = { role: 'pointer', badges: [{ text: 'יעד', cls: 'ptr-pointer' }] };
+      renderVariables([
+        { name: 'x להכנסה', value: x },
+        { name: 'אינדקס יעד', value: insertIdx, highlight: true }
+      ]);
+      setNarration(`נמצא המיקום המתאים: אינדקס ${insertIdx}. שלב ב' O(n): מזיזים את האיברים ימינה.`, false);
+      renderArray();
+      await waitStep(token);
+
+      for (let j = 19; j >= insertIdx; j--) {
+        state.workingArray[j + 1] = state.workingArray[j];
+        state.workingArray[j] = null;
+        state.cellStates = {
+          [j]: { role: 'empty', badges: [{ text: 'פנוי', cls: '' }] },
+          [j + 1]: { role: 'shifted', badges: [{ text: 'הוזז', cls: '' }] }
+        };
+        renderVariables([
+          { name: 'x להכנסה', value: x },
+          { name: 'אינדקס יעד', value: insertIdx },
+          { name: 'הזזה', value: `${j} → ${j + 1}`, highlight: true }
+        ]);
+        setNarration(`מזיזים את ${state.workingArray[j + 1]} מאינדקס ${j} לאינדקס ${j + 1}.`, true);
+        renderArray();
+        await waitStep(token);
+      }
+
+      state.workingArray[insertIdx] = x;
+      state.cellStates = { [insertIdx]: { role: 'found', badges: [{ text: 'new', cls: 'ptr-found' }] } };
+      document.getElementById('array-size-pill').textContent = '21 איברים';
+      renderArray();
+      setNarration(`הכנסנו את ${x} לאינדקס ${insertIdx}. המערך נשאר ממוין!`, true);
+      showResult(`האיבר ${x} הוכנס לאינדקס ${insertIdx} והמערך נשאר ממוין — סיבוכיות O(n).`, 'success');
+    }
+
+    // OP 2: חישוב סכום האיבר הרביעי בגודלו עם האיבר השביעי בגודלו
+    async function runOp2_Sum4thAnd7th(isSorted, token) {
+      const n = state.workingArray.length; // 20
+
+      if (isSorted) {
+        const idx4 = n - 4; // 16
+        const idx7 = n - 7; // 13
+        const v4 = state.workingArray[idx4];
+        const v7 = state.workingArray[idx7];
+        const sum = v4 + v7;
+
+        state.cellStates = {
+          [idx4]: { role: 'found', badges: [{ text: '4 בגודלו', cls: 'ptr-found' }] },
+          [idx7]: { role: 'found', badges: [{ text: '7 בגודלו', cls: 'ptr-found' }] }
+        };
+        renderVariables([
+          { name: `רביעי בגודלו [${idx4}]`, value: v4, highlight: true },
+          { name: `שביעי בגודלו [${idx7}]`, value: v7, highlight: true },
+          { name: 'סכום', value: `${v4} + ${v7} = ${sum}` }
+        ]);
+        setNarration(`גישה ישירה לאינדקס ${idx4} (רביעי מסוף המערך: ${v4}) ולאינדקס ${idx7} (שביעי מסוף המערך: ${v7}).`, true);
+        renderArray();
+        await waitStep(token);
+
+        showResult(`הסכום הוא ${v4} + ${v7} = ${sum} — בוצע בגישה ישירה O(1).`, 'success');
+        return;
+      }
+
+      // Unsorted: O(n) single pass maintaining 7 largest variables
+      let top7 = Array(7).fill(-Infinity);
+      renderTop7Slots(top7, -1, false);
+      setNarration('עוברים פעם אחת על כל המערך ומתחזקים 7 משתנים עבור שבעת המספרים הגדולים ביותר.', false);
+      await waitStep(token);
+
+      for (let i = 0; i < n; i++) {
+        const val = state.workingArray[i];
+        state.cellStates = { [i]: { role: 'active', badges: [{ text: 'i', cls: 'ptr-active' }] } };
+
+        let insertedPos = -1;
+        if (val > top7[6]) {
+          top7.push(val);
+          top7.sort((a, b) => b - a);
+          insertedPos = top7.indexOf(val);
+          top7.pop();
+        }
+
+        renderTop7Slots(top7, insertedPos, false);
+        renderVariables([
+          { name: 'אינדקס i', value: i },
+          { name: 'ערך נבדק', value: val, highlight: insertedPos !== -1 },
+          { name: 'רביעי עד כה (#4)', value: top7[3] === -Infinity ? '—' : top7[3] },
+          { name: 'שביעי עד כה (#7)', value: top7[6] === -Infinity ? '—' : top7[6] }
+        ]);
+        setNarration(
+          insertedPos !== -1
+            ? `אינדקס ${i} (ערך ${val}): נכנס למקום #${insertedPos + 1} ברשימת 7 הגדולים.`
+            : `אינדקס ${i} (ערך ${val}): קטן מ-7 הגדולים שנמצאו עד כה.`,
+          true
+        );
+        renderArray();
+        await waitStep(token);
+      }
+
+      const v4 = top7[3];
+      const v7 = top7[6];
+      const sum = v4 + v7;
+      const idx4 = state.workingArray.indexOf(v4);
+      const idx7 = state.workingArray.indexOf(v7);
+
+      state.cellStates = {
+        [idx4]: { role: 'found', badges: [{ text: '4 בגודלו', cls: 'ptr-found' }] },
+        [idx7]: { role: 'found', badges: [{ text: '7 בגודלו', cls: 'ptr-found' }] }
+      };
+      renderTop7Slots(top7, -1, true);
+      renderArray();
+      setNarration(`סיימנו מעבר יחיד על המערך! מחברים את מקום #4 (${v4}) עם מקום #7 (${v7}).`, false);
+      showResult(`הסכום הוא ${v4} + ${v7} = ${sum} — סיבוכיות O(n).`, 'success');
+    }
+
+    // OP 3: בדיקה אם איבר x נמצא במערך
+    async function runOp3_SearchX(isSorted, x, token) {
+      const n = state.workingArray.length;
+
+      if (isSorted) {
+        // Binary Search O(log n)
+        let L = 0;
+        let R = n - 1;
+
+        while (L <= R) {
+          const mid = Math.floor((L + R) / 2);
+          state.cellStates = {};
+          for (let i = 0; i < n; i++) {
+            if (i < L || i > R) state.cellStates[i] = { role: 'dimmed', badges: [] };
+          }
+          state.cellStates[L] = { role: 'pointer', badges: [{ text: 'L', cls: 'ptr-pointer' }] };
+          state.cellStates[R] = {
+            role: 'pointer',
+            badges: L === R ? [{ text: 'L, R', cls: 'ptr-pointer' }] : [{ text: 'R', cls: 'ptr-pointer' }]
+          };
+          state.cellStates[mid] = { role: 'active', badges: [{ text: 'mid', cls: 'ptr-active' }] };
+
+          renderVariables([
+            { name: 'מחפש x', value: x },
+            { name: 'L / R', value: `${L} / ${R}` },
+            { name: 'mid [ערך]', value: `${mid} [${state.workingArray[mid]}]`, highlight: true }
+          ]);
+          setNarration(`חיפוש בינארי: משווים arr[${mid}]=${state.workingArray[mid]} מול x=${x}.`, true);
+          renderArray();
+          await waitStep(token);
+
+          if (state.workingArray[mid] === x) {
+            state.cellStates[mid] = { role: 'found', badges: [{ text: 'נמצא!', cls: 'ptr-found' }] };
+            renderArray();
+            setNarration(`האיבר ${x} נמצא באינדקס ${mid}!`, false);
+            showResult(`כן! האיבר ${x} נמצא באינדקס ${mid} ב-${state.stepsCount} השוואות — O(log n).`, 'success');
+            return;
+          } else if (state.workingArray[mid] < x) {
+            L = mid + 1;
+          } else {
+            R = mid - 1;
+          }
+        }
+
+        state.cellStates = {};
+        for (let i = 0; i < n; i++) state.cellStates[i] = { role: 'dimmed', badges: [] };
+        renderArray();
+        setNarration(`טווח החיפוש התרוקן (L > R). האיבר ${x} אינו במערך.`, false);
+        showResult(`לא. האיבר ${x} אינו נמצא במערך (נבדק ב-${state.stepsCount} צעדים — O(log n)).`, 'not-found');
+        return;
+      }
+
+      // Linear Search O(n)
+      for (let i = 0; i < n; i++) {
+        state.cellStates = { [i]: { role: 'active', badges: [{ text: 'i', cls: 'ptr-active' }] } };
+        renderVariables([
+          { name: 'מחפש x', value: x },
+          { name: 'אינדקס i', value: i, highlight: true },
+          { name: 'arr[i]', value: state.workingArray[i] }
+        ]);
+        setNarration(`חיפוש לינארי: בודקים אינדקס ${i} (ערך ${state.workingArray[i]}) מול x=${x}.`, true);
+        renderArray();
+        await waitStep(token);
+
+        if (state.workingArray[i] === x) {
+          state.cellStates[i] = { role: 'found', badges: [{ text: 'נמצא!', cls: 'ptr-found' }] };
+          renderArray();
+          setNarration(`האיבר ${x} נמצא באינדקס ${i}!`, false);
+          showResult(`כן! האיבר ${x} נמצא באינדקס ${i} — סיבוכיות O(n).`, 'success');
+          return;
+        }
+      }
+
+      state.cellStates = {};
+      renderArray();
+      setNarration(`סרקנו את כל המערך. האיבר ${x} לא נמצא.`, false);
+      showResult(`לא. האיבר ${x} אינו נמצא במערך — סיבוכיות O(n).`, 'not-found');
+    }
+
+    // OP 4: הוצאת המינימום מהמערך
+    async function runOp4_ExtractMin(isSorted, token) {
+      const n = state.workingArray.length; // 20
+
+      if (isSorted) {
+        // Sorted: Min is at index 0, then shift 1..19 left and shrink to 19
+        const minVal = state.workingArray[0];
+        state.cellStates = { 0: { role: 'found', badges: [{ text: 'min', cls: 'ptr-found' }] } };
+        renderVariables([{ name: 'מינימום [0]', value: minVal, highlight: true }]);
+        setNarration(`המינימום נמצא מיידית במקום הראשון (אינדקס 0, ערך ${minVal}). מוציאים אותו ומזיזים את שאר האיברים שמאלה.`, true);
+        renderArray();
+        await waitStep(token);
+
+        state.workingArray[0] = null;
+        state.cellStates = { 0: { role: 'empty', badges: [{ text: 'התפנה', cls: '' }] } };
+        renderArray();
+        await waitStep(token);
+
+        for (let i = 1; i < n; i++) {
+          state.workingArray[i - 1] = state.workingArray[i];
+          state.workingArray[i] = null;
+          state.cellStates = {
+            [i - 1]: { role: 'shifted', badges: [{ text: 'הוזז', cls: '' }] },
+            [i]: { role: 'empty', badges: [{ text: 'פנוי', cls: '' }] }
+          };
+          renderVariables([
+            { name: 'מינימום שהוצא', value: minVal },
+            { name: 'הזזה שמאלה', value: `${i} → ${i - 1}`, highlight: true }
+          ]);
+          setNarration(`מזיזים את ${state.workingArray[i - 1]} מאינדקס ${i} לאינדקס ${i - 1}.`, true);
+          renderArray();
+          await waitStep(token);
+        }
+
+        // Shrink array to 19 elements
+        state.workingArray.pop();
+        state.cellStates = {};
+        document.getElementById('array-size-pill').textContent = '19 איברים';
+        renderArray();
+        setNarration(`המינימום ${minVal} הוצא וכל שאר האיברים הוזזו שמאלה. גודל המערך כעת 19 והוא נשאר ממוין.`, false);
+        showResult(`המינימום ${minVal} הוצא והמערך נשאר ממוין (19 איברים) — סיבוכיות O(n).`, 'success');
+        return;
+      }
+
+      // Unsorted: Linear scan for minIdx, then move arr[19] to arr[minIdx] and shrink to 19
+      let minIdx = 0;
+      let minVal = state.workingArray[0];
+
+      for (let i = 0; i < n; i++) {
+        if (state.workingArray[i] < minVal) {
+          minVal = state.workingArray[i];
+          minIdx = i;
+        }
+        state.cellStates = {
+          [minIdx]: { role: 'found', badges: [{ text: 'min', cls: 'ptr-found' }] },
+          [i]: i === minIdx
+            ? { role: 'found', badges: [{ text: 'min, i', cls: 'ptr-found' }] }
+            : { role: 'active', badges: [{ text: 'i', cls: 'ptr-active' }] }
+        };
+        renderVariables([
+          { name: 'אינדקס i', value: i },
+          { name: 'מינימום עד כה', value: `${minVal} [${minIdx}]`, highlight: true }
+        ]);
+        setNarration(`חיפוש לינארי אחר המינימום: אינדקס ${i} (ערך ${state.workingArray[i]}). מינימום עד כה: ${minVal}.`, true);
+        renderArray();
+        await waitStep(token);
+      }
+
+      const lastIdx = n - 1;
+      const lastVal = state.workingArray[lastIdx];
+
+      state.cellStates = {
+        [minIdx]: { role: 'active', badges: [{ text: 'מוציא min', cls: 'ptr-active' }] },
+        [lastIdx]: { role: 'pointer', badges: [{ text: 'אחרון', cls: 'ptr-pointer' }] }
+      };
+      setNarration(`המינימום ${minVal} נמצא באינדקס ${minIdx}. מעבירים למקום שהתפנה את האיבר האחרון (${lastVal}) ומקטינים את המערך.`, true);
+      renderArray();
+      await waitStep(token);
+
+      if (minIdx !== lastIdx) {
+        state.workingArray[minIdx] = lastVal;
+      }
+      state.workingArray.pop(); // Shrink to 19 elements
+      state.cellStates = minIdx !== lastIdx
+        ? { [minIdx]: { role: 'shifted', badges: [{ text: 'הועבר מהסוף', cls: '' }] } }
+        : {};
+      document.getElementById('array-size-pill').textContent = '19 איברים';
+
+      renderVariables([
+        { name: 'מינימום שהוצא', value: minVal, highlight: true },
+        { name: 'הועבר למקומו', value: minIdx !== lastIdx ? `${lastVal} → [${minIdx}]` : 'היה בסוף המערך' }
+      ]);
+      renderArray();
+      setNarration(`המינימום ${minVal} הוצא והמערך קטן ל-19 איברים ללא צורך בהזזת שאר האיברים.`, false);
+      showResult(`המינימום ${minVal} הוצא והאיבר האחרון (${lastVal}) הועבר למקומו — סה"כ O(n).`, 'success');
+    }
+
+    // OP 5: בדיקה אם יש זוג איברים במערך שסכומם שווה למספר כלשהו x
+    async function runOp5_TwoSum(isSorted, x, token) {
+      const n = state.workingArray.length;
+
+      if (isSorted) {
+        // Two pointers L=0, R=19 moving inward: O(n)
+        let L = 0;
+        let R = n - 1;
+
+        while (L < R) {
+          const sum = state.workingArray[L] + state.workingArray[R];
+          state.cellStates = {};
+          for (let k = 0; k < n; k++) {
+            if (k < L || k > R) state.cellStates[k] = { role: 'dimmed', badges: [] };
+          }
+          state.cellStates[L] = { role: 'active', badges: [{ text: 'L', cls: 'ptr-active' }] };
+          state.cellStates[R] = { role: 'active', badges: [{ text: 'R', cls: 'ptr-active' }] };
+
+          renderVariables([
+            { name: 'סכום יעד x', value: x },
+            { name: `arr[${L}] + arr[${R}]`, value: `${state.workingArray[L]} + ${state.workingArray[R]} = ${sum}`, highlight: true }
+          ]);
+          setNarration(`בודקים משני צידי המערך: ${state.workingArray[L]} + ${state.workingArray[R]} = ${sum} מול יעד ${x}.`, true);
+          renderArray();
+          await waitStep(token);
+
+          if (sum === x) {
+            state.cellStates[L] = { role: 'found', badges: [{ text: 'נמצא!', cls: 'ptr-found' }] };
+            state.cellStates[R] = { role: 'found', badges: [{ text: 'נמצא!', cls: 'ptr-found' }] };
+            renderArray();
+            setNarration(`נמצא זוג! ${state.workingArray[L]} + ${state.workingArray[R]} = ${x}.`, false);
+            showResult(`כן! הזוג (${state.workingArray[L]}, ${state.workingArray[R]}) באינדקסים [${L}, ${R}] מסתכם ל-${x} — O(n).`, 'success');
+            return;
+          } else if (sum < x) {
+            L++;
+          } else {
+            R--;
+          }
+        }
+
+        state.cellStates = {};
+        renderArray();
+        setNarration(`המצביעים L ו-R נפגשו ללא מציאת זוג שסכומו ${x}.`, false);
+        showResult(`לא. אין זוג איברים במערך שסכומם ${x} — סיבוכיות O(n).`, 'not-found');
+        return;
+      }
+
+      // Unsorted: Nested loops O(n^2)
+      for (let i = 0; i < n - 1; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const sum = state.workingArray[i] + state.workingArray[j];
+          state.cellStates = {
+            [i]: { role: 'pointer', badges: [{ text: 'i', cls: 'ptr-pointer' }] },
+            [j]: { role: 'active', badges: [{ text: 'j', cls: 'ptr-active' }] }
+          };
+          renderVariables([
+            { name: 'סכום יעד x', value: x },
+            { name: `זוג [${i}, ${j}]`, value: `${state.workingArray[i]} + ${state.workingArray[j]} = ${sum}`, highlight: true }
+          ]);
+          setNarration(`לולאה מקוננת: בודקים זוג [${i}, ${j}]: ${state.workingArray[i]} + ${state.workingArray[j]} = ${sum}.`, true);
+          renderArray();
+          await waitStep(token);
+
+          if (sum === x) {
+            state.cellStates = {
+              [i]: { role: 'found', badges: [{ text: 'נמצא!', cls: 'ptr-found' }] },
+              [j]: { role: 'found', badges: [{ text: 'נמצא!', cls: 'ptr-found' }] }
+            };
+            renderArray();
+            setNarration(`נמצא זוג! ${state.workingArray[i]} + ${state.workingArray[j]} = ${x}.`, false);
+            showResult(`כן! הזוג (${state.workingArray[i]}, ${state.workingArray[j]}) באינדקסים [${i}, ${j}] מסתכם ל-${x} — O(n²).`, 'success');
+            return;
+          }
+        }
+      }
+
+      state.cellStates = {};
+      renderArray();
+      setNarration(`נבדקו כל הזוגות האפשריים (${state.stepsCount} בדיקות) ולא נמצא זוג שסכומו ${x}.`, false);
+      showResult(`לא. אין זוג איברים שסכומם ${x} — סיבוכיות O(n²).`, 'not-found');
+    }
+
+    // OP 6: בדיקה מה ההפרש הגדול ביותר בין שני איברים כלשהם במערך
+    async function runOp6_MaxDiff(isSorted, token) {
+      const n = state.workingArray.length;
+
+      if (isSorted) {
+        const minVal = state.workingArray[0];
+        const maxVal = state.workingArray[n - 1];
+        const diff = maxVal - minVal;
+
+        state.cellStates = {
+          0: { role: 'found', badges: [{ text: 'min', cls: 'ptr-found' }] },
+          [n - 1]: { role: 'found', badges: [{ text: 'max', cls: 'ptr-found' }] }
+        };
+        renderVariables([
+          { name: 'ראשון [0]', value: minVal },
+          { name: `אחרון [${n - 1}]`, value: maxVal },
+          { name: 'הפרש מקסימלי', value: `${maxVal} - ${minVal} = ${diff}`, highlight: true }
+        ]);
+        setNarration(`מחשבים ישירות את ההפרש בין שני הקצוות: ${maxVal} - ${minVal} = ${diff}.`, true);
+        renderArray();
+        await waitStep(token);
+
+        showResult(`ההפרש הגדול ביותר הוא ${diff} (${maxVal} - ${minVal}) — סיבוכיות O(1).`, 'success');
+        return;
+      }
+
+      // Unsorted: O(n) single pass tracking min and max
+      let minVal = state.workingArray[0];
+      let maxVal = state.workingArray[0];
+      let minIdx = 0;
+      let maxIdx = 0;
+
+      for (let i = 0; i < n; i++) {
+        const val = state.workingArray[i];
+        if (val < minVal) { minVal = val; minIdx = i; }
+        if (val > maxVal) { maxVal = val; maxIdx = i; }
+
+        state.cellStates = {
+          [minIdx]: { role: 'pointer', badges: [{ text: 'min', cls: 'ptr-pointer' }] },
+          [maxIdx]: { role: 'pointer', badges: [{ text: 'max', cls: 'ptr-pointer' }] },
+          [i]: { role: 'active', badges: [{ text: 'i', cls: 'ptr-active' }] }
+        };
+        if (minIdx === maxIdx && i === minIdx) {
+          state.cellStates[i] = { role: 'active', badges: [{ text: 'min, max', cls: 'ptr-active' }] };
+        }
+
+        renderVariables([
+          { name: 'אינדקס i', value: i },
+          { name: 'מינימום', value: `${minVal} [${minIdx}]`, highlight: true },
+          { name: 'מקסימום', value: `${maxVal} [${maxIdx}]`, highlight: true }
+        ]);
+        setNarration(`אינדקס ${i} (ערך ${val}): מינימום עד כה ${minVal}, מקסימום עד כה ${maxVal}.`, true);
+        renderArray();
+        await waitStep(token);
+      }
+
+      const diff = maxVal - minVal;
+      state.cellStates = {
+        [minIdx]: { role: 'found', badges: [{ text: 'min', cls: 'ptr-found' }] },
+        [maxIdx]: { role: 'found', badges: [{ text: 'max', cls: 'ptr-found' }] }
+      };
+      renderVariables([
+        { name: 'מינימום', value: `${minVal} [${minIdx}]` },
+        { name: 'מקסימום', value: `${maxVal} [${maxIdx}]` },
+        { name: 'הפרש מקסימלי', value: `${maxVal} - ${minVal} = ${diff}`, highlight: true }
+      ]);
+      renderArray();
+      setNarration(`סיימנו מעבר אחד! מחשבים ${maxVal} - ${minVal} = ${diff}.`, false);
+      showResult(`ההפרש הגדול ביותר הוא ${diff} (${maxVal} - ${minVal}) — סיבוכיות O(n).`, 'success');
+    }
+
+    // OP 7: בדיקה מה ההפרש הקטן ביותר בין שני איברים כלשהם במערך
+    async function runOp7_MinDiff(isSorted, token) {
+      const n = state.workingArray.length;
+
+      if (isSorted) {
+        // O(n): Adjacent pairs i, i+1
+        let minDiff = Infinity;
+        let bestPair = [0, 1];
+
+        for (let i = 0; i < n - 1; i++) {
+          const diff = Math.abs(state.workingArray[i + 1] - state.workingArray[i]);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestPair = [i, i + 1];
+          }
+
+          state.cellStates = {
+            [bestPair[0]]: { role: 'pointer', badges: [{ text: 'מינ׳', cls: 'ptr-pointer' }] },
+            [bestPair[1]]: { role: 'pointer', badges: [{ text: 'מינ׳', cls: 'ptr-pointer' }] },
+            [i]: { role: 'active', badges: [{ text: 'i', cls: 'ptr-active' }] },
+            [i + 1]: { role: 'active', badges: [{ text: 'i+1', cls: 'ptr-active' }] }
+          };
+
+          renderVariables([
+            { name: `זוג סמוך [${i}, ${i + 1}]`, value: `|${state.workingArray[i + 1]} - ${state.workingArray[i]}| = ${diff}` },
+            { name: 'הפרש מינימלי', value: `${minDiff} [${bestPair[0]}, ${bestPair[1]}]`, highlight: true }
+          ]);
+          setNarration(`בודקים זוג סמוך [${i}, ${i + 1}]: הפרש ${diff}. המינימום עד כה: ${minDiff}.`, true);
+          renderArray();
+          await waitStep(token);
+        }
+
+        state.cellStates = {
+          [bestPair[0]]: { role: 'found', badges: [{ text: 'הפרש מינ׳', cls: 'ptr-found' }] },
+          [bestPair[1]]: { role: 'found', badges: [{ text: 'הפרש מינ׳', cls: 'ptr-found' }] }
+        };
+        renderArray();
+        setNarration(`סיימנו מעבר על כל הזוגות הסמוכים! ההפרש הקטן ביותר הוא ${minDiff}.`, false);
+        showResult(`ההפרש הקטן ביותר הוא ${minDiff} (בין ${state.workingArray[bestPair[0]]} ל-${state.workingArray[bestPair[1]]}) — סיבוכיות O(n).`, 'success');
+        return;
+      }
+
+      // Unsorted: O(n^2) nested loops checking all pairs
+      let minDiff = Infinity;
+      let bestPair = [0, 1];
+
+      for (let i = 0; i < n - 1; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const diff = Math.abs(state.workingArray[i] - state.workingArray[j]);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestPair = [i, j];
+          }
+
+          state.cellStates = {
+            [bestPair[0]]: { role: 'pointer', badges: [{ text: 'מינ׳', cls: 'ptr-pointer' }] },
+            [bestPair[1]]: { role: 'pointer', badges: [{ text: 'מינ׳', cls: 'ptr-pointer' }] },
+            [i]: { role: 'active', badges: [{ text: 'i', cls: 'ptr-active' }] },
+            [j]: { role: 'active', badges: [{ text: 'j', cls: 'ptr-active' }] }
+          };
+
+          renderVariables([
+            { name: `זוג [${i}, ${j}]`, value: `|${state.workingArray[i]} - ${state.workingArray[j]}| = ${diff}` },
+            { name: 'הפרש מינימלי', value: `${minDiff} [${bestPair[0]}, ${bestPair[1]}]`, highlight: true }
+          ]);
+          setNarration(`לולאה מקוננת: זוג [${i}, ${j}] (${state.workingArray[i]}, ${state.workingArray[j]}), הפרש = ${diff}. מינימום: ${minDiff}.`, true);
+          renderArray();
+          await waitStep(token);
+        }
+      }
+
+      state.cellStates = {
+        [bestPair[0]]: { role: 'found', badges: [{ text: 'הפרש מינ׳', cls: 'ptr-found' }] },
+        [bestPair[1]]: { role: 'found', badges: [{ text: 'הפרש מינ׳', cls: 'ptr-found' }] }
+      };
+      renderArray();
+      setNarration(`נבדקו כל ${state.stepsCount} הזוגות האפשריים! ההפרש הקטן ביותר הוא ${minDiff}.`, false);
+      showResult(`ההפרש הקטן ביותר הוא ${minDiff} (בין ${state.workingArray[bestPair[0]]} ל-${state.workingArray[bestPair[1]]}) — סיבוכיות O(n²).`, 'success');
+    }
+  </script>
+</body>
+</html>
