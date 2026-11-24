@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>הדמיית חלון צף - חיפוש סכום ברצף</title>
+    <title>האם יש במערך רצף שסכומו ערך נתון</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -27,6 +27,8 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         input[type="number"] {
@@ -49,8 +51,37 @@
             transition: background 0.2s;
         }
 
-        button:hover {
+        button:hover:not(:disabled) {
             background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .btn-back {
+            background-color: #e67e22;
+        }
+
+        .btn-back:hover:not(:disabled) {
+            background-color: #d35400;
+        }
+
+        .btn-reset {
+            background-color: #9b59b6;
+        }
+
+        .btn-reset:hover:not(:disabled) {
+            background-color: #8e44ad;
+        }
+
+        .btn-new {
+            background-color: #7f8c8d;
+        }
+
+        .btn-new:hover:not(:disabled) {
+            background-color: #636e72;
         }
 
         .array-container {
@@ -161,7 +192,7 @@
 
         .instruction-tip {
             color: #7f8c8d;
-            font-size: 15px;
+            font-size: 14px;
             margin-bottom: 15px;
             background: #eebd2b1a;
             padding: 8px 16px;
@@ -172,19 +203,21 @@
 </head>
 <body>
 
-    <h1>הדמיית חלון צף (Two Pointers)</h1>
+    <h1>האם יש במערך רצף שסכומו ערך נתון</h1>
 
-    <!-- שלב א: הזנת ה-num המבוקש -->
+    <!-- שלב א: הזנת ה-num המבוקש וכפתורי ניווט -->
     <div class="setup-container">
         <label for="targetNum">הכנס את ה-num המבוקש:</label>
-        <input type="number" id="targetNum" min="1" value="50">
-        <button id="startBtn" onclick="initSearch()">התחל חיפוש</button>
-        <button onclick="generateNewArray()">הגרל מערך חדש</button>
+        <input type="number" id="targetNum" min="1" value="50" onchange="resetSimulation()">
+        <button id="stepForwardBtn" onclick="stepForward()">צעד קדימה</button>
+        <button id="stepBackBtn" class="btn-back" onclick="stepBackward()" disabled>צעד אחורה</button>
+        <button id="resetSearchBtn" class="btn-reset" onclick="resetSimulation()" disabled>אתחול חיפוש</button>
+        <button class="btn-new" onclick="generateNewArray()">הגרל מערך חדש</button>
     </div>
 
-    <!-- הנחיית שימוש ממוקדת -->
-    <div class="instruction-tip" id="keyboardTip" style="display: none;">
-        מדריך: לחץ על מקש <strong>Enter</strong> כדי לבצע את הצעד הבא באלגוריתם.
+    <!-- הנחיית שימוש -->
+    <div class="instruction-tip" id="keyboardTip">
+        ניתן להתקדם באמצעות הכפתור <strong>צעד קדימה</strong> או מקש <strong>Enter</strong>, לחזור באמצעות <strong>צעד אחורה</strong>, או לאפס בעזרת <strong>אתחול חיפוש</strong>.
     </div>
 
     <!-- תצוגת המערך והמצביעים -->
@@ -206,20 +239,19 @@
         let r = 1;
         let currentSum = 0;
         let targetNum = 0;
-        let isRunning = false;
+        
+        // מצבי הסימולציה: 'idle' (טרם התחיל), 'running' (בעיצומו), 'finished' (הסתיים)
+        let simState = 'idle'; 
+        let history = [];
 
         window.onload = function() {
             generateNewArray();
             
-            // האזנה גלובלית למקש Enter
+            // האזנה למקלדת
             window.addEventListener('keydown', function(event) {
                 if (event.key === 'Enter') {
                     event.preventDefault(); 
-                    if (isRunning) {
-                        nextStep();
-                    } else {
-                        initSearch();
-                    }
+                    stepForward();
                 }
             });
         };
@@ -229,10 +261,58 @@
             for (let i = 0; i < arraySize; i++) {
                 array.push(Math.floor(Math.random() * 20) + 1);
             }
-            isRunning = false;
-            document.getElementById('keyboardTip').style.display = 'none';
+            resetSimulation();
+        }
+
+        function resetSimulation() {
+            simState = 'idle';
+            history = [];
             document.getElementById('statusPanel').style.display = 'none';
             document.getElementById('msgContainer').style.display = 'none';
+            updateButtons();
+            renderArray();
+        }
+
+        function updateButtons() {
+            document.getElementById('stepForwardBtn').disabled = (simState === 'finished');
+            document.getElementById('stepBackBtn').disabled = (history.length <= 1);
+            document.getElementById('resetSearchBtn').disabled = (simState === 'idle');
+        }
+
+        function saveState(actionText, isFinished = false, isSuccess = false, finalMessage = "") {
+            history.push({
+                l: l,
+                r: r,
+                currentSum: currentSum,
+                actionText: actionText,
+                simState: simState,
+                isSuccess: isSuccess,
+                finalMessage: finalMessage
+            });
+            updateButtons();
+        }
+
+        function renderState(state) {
+            l = state.l;
+            r = state.r;
+            currentSum = state.currentSum;
+            simState = state.simState;
+
+            document.getElementById('statusPanel').style.display = 'block';
+            document.getElementById('valNumBox').innerText = targetNum;
+            document.getElementById('valSum').innerText = currentSum;
+            document.getElementById('valAction').innerText = state.actionText;
+
+            const msgContainer = document.getElementById('msgContainer');
+            if (simState === 'finished') {
+                msgContainer.style.display = 'block';
+                msgContainer.innerText = state.finalMessage;
+                msgContainer.className = state.isSuccess ? "message success" : "message failure";
+            } else {
+                msgContainer.style.display = 'none';
+            }
+
+            updateButtons();
             renderArray();
         }
 
@@ -254,7 +334,7 @@
                 cellDiv.id = `cell-${index}`;
                 cellDiv.innerText = num;
 
-                if (isRunning && index >= l && index <= r - 1) {
+                if (simState !== 'idle' && index >= l && index <= r - 1) {
                     cellDiv.classList.add('in-window');
                 }
 
@@ -283,7 +363,7 @@
             container.appendChild(extraWrapper);
 
             // מיקום המצביעים
-            if (isRunning) {
+            if (simState !== 'idle') {
                 const lPointer = document.createElement('div');
                 lPointer.className = 'pointer l';
                 lPointer.innerText = 'l';
@@ -298,52 +378,55 @@
             }
         }
 
-        function initSearch() {
-            const inputVal = document.getElementById('targetNum').value;
-            targetNum = parseInt(inputVal);
+        function stepForward() {
+            if (simState === 'finished') return;
 
-            if (isNaN(targetNum) || targetNum <= 0) {
-                alert("אנא הכנס מספר טבעי תקין הגדול מ-0");
+            // שלב האתחול (לחיצה ראשונה)
+            if (simState === 'idle') {
+                const inputVal = document.getElementById('targetNum').value;
+                targetNum = parseInt(inputVal);
+
+                if (isNaN(targetNum) || targetNum <= 0) {
+                    alert("אנא הכנס מספר טבעי תקין הגדול מ-0");
+                    return;
+                }
+
+                l = 0;
+                r = 1;
+                currentSum = array[0];
+                simState = 'running';
+
+                let initialAction = "החיפוש התחיל. המצביעים מאותחלים: l=0, r=1.";
+                if (currentSum === targetNum) {
+                    initialAction += " (הושג הסכום המבוקש מיד בהתחלה! לחץ צעד קדימה לסיום)";
+                }
+
+                saveState(initialAction);
+                renderState(history[history.length - 1]);
                 return;
             }
 
-            l = 0;
-            r = 1;
-            currentSum = array[0];
-            isRunning = true;
-
-            document.getElementById('keyboardTip').style.display = 'block';
-            document.getElementById('statusPanel').style.display = 'block';
-            document.getElementById('msgContainer').style.display = 'none';
-            
-            updateStatusPanel("החיפוש התחיל. המצביעים מאותחלים: l=0, r=1. לחץ Enter כדי להמשיך.");
-            renderArray();
-        }
-
-        function updateStatusPanel(actionText) {
-            document.getElementById('valNumBox').innerText = targetNum;
-            document.getElementById('valSum').innerText = currentSum;
-            document.getElementById('valAction').innerText = actionText;
-        }
-
-        function nextStep() {
-            if (!isRunning) return;
-
             // בדיקת התאמה ל-num
             if (currentSum === targetNum) {
-                endSearch(true, `נמצא רצף! מאינדקס ${l} עד אינדקס ${r-1} הסכום הוא בדיוק ${targetNum}.`);
+                simState = 'finished';
+                const msg = `נמצא רצף! מאינדקס ${l} עד אינדקס ${r-1} הסכום הוא בדיוק ${targetNum}.`;
+                saveState("החיפוש הסתיים בהצלחה.", true, true, msg);
+                renderState(history[history.length - 1]);
                 return;
             }
 
             // בדיקת חריגה
             if (r > arraySize) {
-                endSearch(false, "החיפוש הסתיים בכישלון: המצביע r חרג מגבולות המערך ולא נמצא רצף מתאים.");
+                simState = 'finished';
+                const msg = "החיפוש הסתיים בכישלון: המצביע r חרג מגבולות המערך ולא נמצא רצף מתאים.";
+                saveState("החיפוש הסתיים בכישלון.", true, false, msg);
+                renderState(history[history.length - 1]);
                 return;
             }
 
             let actionDescription = "";
 
-            // לוגיקת האלגוריתם בהתאמה ל-num
+            // לוגיקת קידום המצביעים והסכום
             if (currentSum < targetNum) {
                 if (r < arraySize) {
                     currentSum += array[r];
@@ -365,30 +448,23 @@
                 }
             }
 
-            renderArray();
-            
             if (currentSum === targetNum) {
-                updateStatusPanel(actionDescription + " (הושג הסכום המבוקש! לחץ Enter לאישור הבדיקה)");
+                actionDescription += " (הושג הסכום המבוקש! לחץ צעד קדימה לאישור)";
             } else if (r > arraySize && currentSum !== targetNum) {
-                updateStatusPanel(actionDescription + " (המצביע r חרג מהמערך. לחץ Enter לסיום)");
-            } else {
-                updateStatusPanel(actionDescription);
+                actionDescription += " (המצביע r חרג מהמערך. לחץ צעד קדימה לסיום)";
             }
+
+            saveState(actionDescription);
+            renderState(history[history.length - 1]);
         }
 
-        function endSearch(isSuccess, message) {
-            isRunning = false;
-            document.getElementById('keyboardTip').style.display = 'none';
+        function stepBackward() {
+            if (history.length <= 1) return;
             
-            const msgContainer = document.getElementById('msgContainer');
-            msgContainer.style.display = 'block';
-            msgContainer.innerText = message;
-            
-            if (isSuccess) {
-                msgContainer.className = "message success";
-            } else {
-                msgContainer.className = "message failure";
-            }
+            // הסרת המצב הנוכחי ושחזור המצב הקודם
+            history.pop();
+            const previousState = history[history.length - 1];
+            renderState(previousState);
         }
     </script>
 </body>
