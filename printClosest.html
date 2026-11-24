@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>חיפוש סכום קרוב ביותר</title>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .simulator-box {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 1150px;
+            width: 100%;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }
+
+        .simulator-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .controls {
+            margin-bottom: 25px;
+            background-color: #f1f5f9;
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        label {
+            font-weight: 600;
+        }
+
+        input[type="number"] {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 11pt;
+            width: 90px;
+            text-align: center;
+            direction: ltr; 
+        }
+
+        button {
+            background-color: #475569;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 10.5pt;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #334155;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .dashboard-cell {
+            padding: 12px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 10pt;
+            text-align: center;
+            color: #475569;
+        }
+
+        .dashboard-cell span {
+            display: block;
+            font-size: 14pt;
+            color: #0f172a;
+            margin-top: 5px;
+            direction: ltr; 
+            unicode-bidi: bidi-override;
+        }
+
+        .array-container {
+            margin: 20px 0;
+        }
+
+        .array-label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #475569;
+        }
+
+        .array-wrapper {
+            display: flex;
+            flex-direction: row;
+            padding-bottom: 45px;
+            position: relative;
+            overflow-x: auto;
+            align-items: flex-start;
+        }
+
+        .array-cell {
+            width: 48px;
+            height: 45px;
+            line-height: 45px;
+            text-align: center;
+            border: 1px solid #cbd5e1;
+            background-color: #ffffff;
+            margin-left: -1px;
+            font-weight: bold;
+            font-size: 11pt;
+            position: relative;
+            flex-shrink: 0;
+            direction: ltr;
+        }
+
+        .array-cell.active {
+            background-color: #bae6fd;
+            border-color: #0284c7;
+            color: #0369a1;
+            z-index: 10;
+        }
+
+        .array-cell.out-of-bounds {
+            border: 1px dashed #dc2626;
+            background-color: rgba(254, 226, 226, 0.4);
+            color: #dc2626;
+            font-size: 9pt;
+            line-height: 43px;
+            z-index: 5;
+        }
+
+        .pointer {
+            position: absolute;
+            bottom: -32px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14pt;
+            color: #dc2626;
+            font-weight: bold;
+            display: none;
+        }
+
+        .pointer-text {
+            position: absolute;
+            bottom: -48px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8.5pt;
+            color: #dc2626;
+            font-weight: bold;
+            white-space: nowrap;
+            display: none;
+        }
+
+        .status-msg {
+            background-color: #fff9db;
+            border-right: 4px solid #fcc419;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 0 6px 6px 0;
+            font-weight: 500;
+            min-height: 54px;
+            line-height: 1.5;
+        }
+
+        .status-msg span.num-fixed {
+            direction: ltr;
+            display: inline-block;
+        }
+
+        .status-success {
+            background-color: #ebfbee;
+            border-right-color: #40c057;
+            color: #2b8a3e;
+        }
+
+        .status-info {
+            background-color: #e3fafc;
+            border-right-color: #15aabf;
+            color: #0b7285;
+        }
+        
+        .instructions {
+            font-size: 9.5pt;
+            color: #64748b;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="simulator-box">
+    <div class="simulator-title">חיפוש סכום קרוב ביותר</div>
+    
+    <div class="controls">
+        <label for="targetSum">הסכום המבוקש (x):</label>
+        <input type="number" id="targetSum" value="15" min="-200" max="200">
+        <button id="resetBtn" onclick="regenerateArrays()">הגרל מערכים חדשים</button>
+        <div class="instructions">הקישו <strong>Enter</strong> בחלונית כדי להתחיל/לאתחל, והמשיכו ללחוץ <strong>Enter</strong> מחוץ לחלונית כדי להתקדם בצעדים.</div>
+    </div>
+
+    <div class="dashboard">
+        <div class="dashboard-cell">הפרש מינימלי:<span id="minDiffDisplay">∞</span></div>
+        <div class="dashboard-cell">הסכום הקרוב ביותר:<span id="closestSumDisplay">-</span></div>
+        <div class="dashboard-cell">סכום מוצבע נוכחי:<span id="currentSumDisplay">-</span></div>
+        <div class="dashboard-cell">הפרש נוכחי:<span id="currentDiffDisplay">-</span></div>
+    </div>
+
+    <div class="array-container">
+        <div class="array-label">מערך a (מאוזן, 20 איברים בתחום [100-, 100]):</div>
+        <div class="array-wrapper" id="arrayAWrapper" dir="ltr"></div>
+    </div>
+
+    <div class="array-container">
+        <div class="array-label">מערך b (מאוזן, 20 איברים בתחום [100-, 100]):</div>
+        <div class="array-wrapper" id="arrayBWrapper" dir="ltr"></div>
+    </div>
+
+    <div class="status-msg" id="statusMessage">
+        הזינו סכום יעד ולחצו על Enter בתוך החלונית כדי להתחיל את החיפוש.
+    </div>
+</div>
+
+<script>
+    let arrA = [];
+    let arrB = [];
+    let ptrA = 0;
+    let ptrB = 0;
+    let targetX = 15;
+    let minDiff = Infinity;
+    let closestSum = null;
+    let closestPair = { a: null, b: null };
+    let isSearching = false;
+    let hasEnded = false;
+
+    const targetInput = document.getElementById('targetSum');
+
+    targetInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.stopPropagation();
+            initSearch();
+        }
+    });
+
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            if (isSearching && !hasEnded) {
+                e.preventDefault();
+                stepSearch();
+            }
+        }
+    });
+
+    function generateBalancedSortedArray() {
+        let arr = [];
+        let current = -90 + Math.floor(Math.random() * 35); 
+        
+        for(let i = 0; i < 20; i++) {
+            arr.push(current);
+            current += Math.floor(Math.random() * 9) + 4; 
+        }
+        
+        return arr.map(val => val > 100 ? 100 : val);
+    }
+
+    // פונקציית עזר המאתרת מספרים שליליים בטקסט ועוטפת אותם כדי למנוע היפוך מינוס בעברית
+    function formatNegativeNumbersInText(text) {
+        return text.replace(/(-\d+)/g, '<span class="num-fixed">$1</span>');
+    }
+
+    // פונקציה לעדכון טקסט הסטטוס בצורה בטוחה עם תיקון המינוסים
+    function updateStatusMessage(htmlClass, rawText) {
+        const statusBox = document.getElementById('statusMessage');
+        statusBox.className = htmlClass;
+        statusBox.innerHTML = formatNegativeNumbersInText(rawText);
+    }
+
+    function createPointerElements(text) {
+        const pointer = document.createElement('div');
+        pointer.className = 'pointer';
+        pointer.innerHTML = '▲';
+        pointer.style.display = 'block';
+        
+        const pText = document.createElement('div');
+        pText.className = 'pointer-text';
+        pText.innerText = text;
+        pText.style.display = 'block';
+        
+        return { pointer, pText };
+    }
+
+    function renderArrays() {
+        const wrapperA = document.getElementById('arrayAWrapper');
+        const wrapperB = document.getElementById('arrayBWrapper');
+        
+        wrapperA.innerHTML = '';
+        wrapperB.innerHTML = '';
+
+        arrA.forEach((val, idx) => {
+            const cell = document.createElement('div');
+            cell.className = 'array-cell' + (isSearching && idx === ptrA && !hasEnded ? ' active' : '');
+            cell.innerText = val;
+            
+            if (idx === ptrA && (isSearching || hasEnded)) {
+                const { pointer, pText } = createPointerElements('ptr a');
+                cell.appendChild(pointer);
+                cell.appendChild(pText);
+                if (hasEnded) cell.classList.add('active'); 
+            }
+            wrapperA.appendChild(cell);
+        });
+
+        if (hasEnded && ptrA >= arrA.length) {
+            const outCell = document.createElement('div');
+            outCell.className = 'array-cell out-of-bounds';
+            outCell.innerText = 'מחוץ ל-a';
+            const { pointer, pText } = createPointerElements('ptr a');
+            outCell.appendChild(pointer);
+            outCell.appendChild(pText);
+            wrapperA.appendChild(outCell);
+        }
+
+        if (hasEnded && ptrB < 0) {
+            const outCell = document.createElement('div');
+            outCell.className = 'array-cell out-of-bounds';
+            outCell.innerText = 'מחוץ ל-b';
+            const { pointer, pText } = createPointerElements('ptr b');
+            outCell.appendChild(pointer);
+            outCell.appendChild(pText);
+            wrapperB.appendChild(outCell);
+        }
+
+        arrB.forEach((val, idx) => {
+            const cell = document.createElement('div');
+            cell.className = 'array-cell' + (isSearching && idx === ptrB && !hasEnded ? ' active' : '');
+            cell.innerText = val;
+            
+            if (idx === ptrB && (isSearching || hasEnded)) {
+                const { pointer, pText } = createPointerElements('ptr b');
+                cell.appendChild(pointer);
+                cell.appendChild(pText);
+                if (hasEnded) cell.classList.add('active');
+            }
+            wrapperB.appendChild(cell);
+        });
+    }
+
+    function regenerateArrays() {
+        arrA = generateBalancedSortedArray();
+        arrB = generateBalancedSortedArray();
+        
+        minDiff = Infinity;
+        closestSum = null;
+        closestPair = { a: null, b: null };
+        isSearching = false;
+        hasEnded = false;
+        ptrA = 0;
+        ptrB = arrB.length - 1;
+
+        document.getElementById('minDiffDisplay').innerText = '∞';
+        document.getElementById('closestSumDisplay').innerText = '-';
+        document.getElementById('currentSumDisplay').innerText = '-';
+        document.getElementById('currentDiffDisplay').innerText = '-';
+        
+        updateStatusMessage('status-msg', 'מערכים חדשים ומאוזנים בגודל 20 הוגרלו בתחום [100-, 100]. הזינו סכום ולחצו Enter בחלונית כדי להתחיל.');
+        
+        renderArrays();
+    }
+
+    function initSearch() {
+        targetX = parseInt(targetInput.value) || 0;
+        ptrA = 0;
+        ptrB = arrB.length - 1;
+        minDiff = Infinity;
+        closestSum = null;
+        isSearching = true;
+        hasEnded = false;
+
+        document.getElementById('minDiffDisplay').innerText = '∞';
+        document.getElementById('closestSumDisplay').innerText = '-';
+        
+        executeSearchStep();
+    }
+
+    function formatClosestDisplay(sum, a, b) {
+        let strA = a < 0 ? `-${Math.abs(a)}` : `${a}`;
+        let strB = b < 0 ? `-${Math.abs(b)}` : `${b}`;
+        let strSum = sum < 0 ? `-${Math.abs(sum)}` : `${sum}`;
+        return `${strSum} (${strA} + ${strB})`;
+    }
+
+    function executeSearchStep() {
+        if (!isSearching) return;
+
+        renderArrays();
+
+        let valA = arrA[ptrA];
+        let valB = arrB[ptrB];
+        let currentSum = valA + valB;
+        let currentDiff = Math.abs(currentSum - targetX);
+
+        document.getElementById('currentSumDisplay').innerText = currentSum;
+        document.getElementById('currentDiffDisplay').innerText = currentDiff;
+
+        let updatedBest = false;
+        if (currentDiff < minDiff) {
+            minDiff = currentDiff;
+            closestSum = currentSum;
+            closestPair.a = valA;
+            closestPair.b = valB;
+            
+            document.getElementById('minDiffDisplay').innerText = minDiff;
+            document.getElementById('closestSumDisplay').innerText = formatClosestDisplay(closestSum, valA, valB);
+            updatedBest = true;
+        }
+
+        if (currentSum === targetX) {
+            isSearching = false;
+            updateStatusMessage('status-msg status-success', `החיפוש הסתיים! נמצא בדיוק הסכום המבוקש! הצמד הוא: ${valA} (מערך a) ו-${valB} (מערך b). סכומם: ${currentSum}. כדי להתחיל מחדש, לחצו על "הגרל מערכים חדשים" או לחצו שוב Enter בחלונית הסכום המבוקש.`);
+            return;
+        }
+
+        let msg = `נבחן צמד: a[${ptrA}] = ${valA}, b[${ptrB}] = ${valB}. סכום: ${currentSum}. `;
+        if (updatedBest) msg += `זהו ההפרש המינימלי החדש שלך (${currentDiff})! `;
+
+        const statusBox = document.getElementById('statusMessage');
+        if (currentSum > targetX) {
+            msg += `הסכום גדול מ-${targetX} ➔ לחצו Enter כדי להזיז שמאלה את ptr b (הקטנת הסכום).`;
+            updateStatusMessage('status-msg status-info', msg);
+            statusBox.dataset.nextAction = 'decrementB';
+        } else {
+            msg += `הסכום קטן מ-${targetX} ➔ לחצו Enter כדי להזיז ימינה את ptr a (הגדלת הסכום).`;
+            updateStatusMessage('status-msg status-info', msg);
+            statusBox.dataset.nextAction = 'incrementA';
+        }
+    }
+
+    function stepSearch() {
+        if (!isSearching || hasEnded) return;
+        
+        const statusBox = document.getElementById('statusMessage');
+        const nextAction = statusBox.dataset.nextAction;
+
+        if (nextAction === 'decrementB') {
+            ptrB--;
+            if (ptrB < 0) {
+                endSearch();
+                return;
+            }
+        } else if (nextAction === 'incrementA') {
+            ptrA++;
+            if (ptrA >= arrA.length) {
+                endSearch();
+                return;
+            }
+        }
+
+        executeSearchStep();
+    }
+
+    function endSearch() {
+        isSearching = false;
+        hasEnded = true; 
+        
+        renderArrays();
+
+        document.getElementById('currentSumDisplay').innerText = '-';
+        document.getElementById('currentDiffDisplay').innerText = '-';
+
+        updateStatusMessage('status-msg status-success', `החיפוש הסתיים (אחד המצביעים יצא מגבולות המערך כפי שמוצג באדום). הסכום הקרוב ביותר שנמצא במהלך החיפוש הוא ${closestSum} (הצמד: ${closestPair.a} ו-${closestPair.b}) בהפרש של ${minDiff}. כדי להתחיל מחדש, לחצו על "הגרל מערכים חדשים" או לחצו שוב Enter בחלונית הסכום המבוקש.`);
+    }
+
+    regenerateArrays();
+</script>
+
+</body>
+</html>
