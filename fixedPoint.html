@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הדגמת חיפוש נקודת שבת - גרסת גלילה מאובטחת</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 10px;
+            padding: 0;
+            direction: rtl; /* שפת הדף הכללית היא עברית */
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 5px;
+            font-size: 1.6rem;
+        }
+        .container {
+            width: 100%;
+            max-width: 1350px;
+            margin: 0 auto;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        .instructions {
+            text-align: center;
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            background-color: #fcf8e3;
+            padding: 10px;
+            border: 1px solid #faebcc;
+            border-radius: 4px;
+        }
+        .status-message {
+            font-size: 1.15rem;
+            font-weight: bold;
+            margin: 15px 0;
+            min-height: 50px;
+            color: #16a085;
+            text-align: center;
+            background-color: #e8f8f5;
+            padding: 10px;
+            border-radius: 5px;
+            direction: rtl;
+        }
+        
+        /* אזור הסימולציה - מכיל פס גלילה חובה למקרה שהמסך צר */
+        .simulation-zone {
+            display: block;
+            overflow-x: scroll; /* תמיד מציג פס גלילה אופקי במידת הצורך */
+            white-space: nowrap;
+            padding: 15px 5px;
+            margin: 15px 0;
+            border: 2px solid #34495e;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+
+        .array-container {
+            display: inline-flex; /* גורם למערך להימתח לרוחבו המלא ללא כיווץ */
+            direction: ltr; /* המערך עצמו רץ משמאל לימין (אינדקס 0 בשמאל) */
+        }
+
+        .cell-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 55px; /* רוחב תא קומפקטי */
+            margin: 0 2px;
+            flex-shrink: 0;
+        }
+
+        .index-label {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        .cell {
+            width: 100%;
+            height: 45px;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            background-color: #ecf0f1;
+            transition: background-color 0.2s ease;
+        }
+
+        /* צבעי רקע של הטווחים */
+        .active-range {
+            background-color: #2ecc71 !important; /* ירוק */
+            color: white;
+            border-color: #27ae60;
+        }
+        .inactive-range {
+            background-color: #e74c3c !important; /* אדום */
+            color: white;
+            border-color: #c0392b;
+        }
+        .found-cell {
+            background-color: #f1c40f !important; /* זהב */
+            color: #2c3e50;
+            border-color: #f39c12;
+            transform: scale(1.05);
+        }
+
+        /* אזור החיצים מתחת לכל תא */
+        .pointer-space {
+            margin-top: 5px;
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .ptr-label {
+            display: none; 
+            text-align: center;
+        }
+        .ptr-label::before {
+            content: "▲";
+            display: block;
+            font-size: 0.85rem;
+        }
+        
+        .ptr-low { color: #2980b9; }
+        .ptr-mid { color: #d35400; font-weight: 900; }
+        .ptr-high { color: #8e44ad; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>הדגמת חיפוש בינארי לנקודת שבת</h1>
+    <div class="instructions">
+        המערך מוגרל מחדש בכל טעינה ומוצג <strong>משמאל לימין</strong> (אינדקס 0 משמאל).<br>
+        במידה ולא רואים את כל המערך, <strong>ניתן לגלול אופקית</strong> בתוך התיבה המסומנת.<br>
+        לחץ על מקש ה-<strong>Enter ↩</strong> במקלדת כדי להתקדם בסימולציה. לרענון לחץ F5.
+    </div>
+    
+    <hr>
+    
+    <h2 id="simulation-title">מערך 1: יש נקודת שבת אחת (מוגרל)</h2>
+    <div class="status-message" id="status-msg">לחץ על Enter כדי להתחיל את החיפוש...</div>
+
+    <div class="simulation-zone">
+        <div class="array-container" id="array-container">
+            </div>
+    </div>
+</div>
+
+<script>
+    let currentArray = [];
+    let low = 0;
+    let high = 0;
+    let mid = -1;
+    
+    let currentStage = 1; 
+    let stepPhase = 'init'; 
+
+    // הגרלת מערך עם נקודת שבת אחת בדיוק
+    function generateArrayWithFixedPoint(size) {
+        let arr = new Array(size);
+        let fixedIndex = Math.floor(Math.random() * size);
+        arr[fixedIndex] = fixedIndex;
+
+        let currentVal = fixedIndex;
+        for (let i = fixedIndex - 1; i >= 0; i--) {
+            currentVal -= (Math.floor(Math.random() * 3) + 2); 
+            arr[i] = currentVal;
+        }
+
+        currentVal = fixedIndex;
+        for (let i = fixedIndex + 1; i < size; i++) {
+            currentVal += (Math.floor(Math.random() * 3) + 2);
+            arr[i] = currentVal;
+        }
+        return arr;
+    }
+
+    // הגרלת מערך ללא נקודת שבת בכלל
+    function generateArrayWithoutFixedPoint(size) {
+        let arr = new Array(size);
+        let currentVal = Math.floor(Math.random() * 5) + 2; 
+        for(let i = 0; i < size; i++) {
+            arr[i] = currentVal;
+            currentVal += (Math.floor(Math.random() * 2) + 2); 
+        }
+        return arr;
+    }
+
+    // בניית המערך במסך
+    function initArrayDisplay(arr) {
+        currentArray = arr;
+        low = 0;
+        high = arr.length - 1;
+        mid = -1;
+        stepPhase = 'calculate-mid';
+
+        const container = document.getElementById('array-container');
+        container.innerHTML = '';
+
+        arr.forEach((val, idx) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'cell-wrapper';
+
+            const indexLabel = document.createElement('div');
+            indexLabel.className = 'index-label';
+            indexLabel.innerText = `i=${idx}`;
+
+            const cell = document.createElement('div');
+            cell.className = 'cell active-range'; 
+            cell.id = `cell-${idx}`;
+            cell.innerText = val;
+
+            const pointerSpace = document.createElement('div');
+            pointerSpace.className = 'pointer-space';
+            pointerSpace.innerHTML = `
+                <div id="low-${idx}" class="ptr-label ptr-low">low</div>
+                <div id="mid-${idx}" class="ptr-label ptr-mid">mid</div>
+                <div id="high-${idx}" class="ptr-label ptr-high">high</div>
+            `;
+
+            wrapper.appendChild(indexLabel);
+            wrapper.appendChild(cell);
+            wrapper.appendChild(pointerSpace);
+            container.appendChild(wrapper);
+        });
+        
+        updatePointersDisplay();
+    }
+
+    // עדכון החיצים הפנימיים בתאים
+    function updatePointersDisplay() {
+        document.querySelectorAll('.ptr-label').forEach(el => el.style.display = 'none');
+
+        if (low <= high && low < currentArray.length && high >= 0) {
+            const lowEl = document.getElementById(`low-${low}`);
+            if (lowEl) lowEl.style.display = 'block';
+
+            const highEl = document.getElementById(`high-${high}`);
+            if (highEl) highEl.style.display = 'block';
+
+            if (mid !== -1) {
+                const midEl = document.getElementById(`mid-${mid}`);
+                if (midEl) midEl.style.display = 'block';
+            }
+        }
+    }
+
+    // צביעת התאים (ירוק לפעיל, אדום לנפסל)
+    function colorArrayRanges() {
+        for (let i = 0; i < currentArray.length; i++) {
+            const cell = document.getElementById(`cell-${i}`);
+            if (cell) {
+                if (i >= low && i <= high) {
+                    cell.className = 'cell active-range'; 
+                } else {
+                    cell.className = 'cell inactive-range'; 
+                }
+            }
+        }
+    }
+
+    // צעדי הסימולציה
+    function nextStep() {
+        const msgBox = document.getElementById('status-msg');
+
+        if (low > high) {
+            msgBox.innerHTML = `<span style="color:#e74c3c;">אין במערך נקודת שבת! (low עבר את high) - לחץ Enter להמשך</span>`;
+            colorArrayRanges();
+            endOfSimulationScenario();
+            return;
+        }
+
+        if (stepPhase === 'calculate-mid') {
+            mid = Math.floor((low + high) / 2);
+            updatePointersDisplay();
+            msgBox.innerHTML = `נחשב אמצע: <strong>mid = ${mid}</strong>. נבדוק את הערך בתא: A[${mid}] = <strong>${currentArray[mid]}</strong> [Enter לבדיקה]`;
+            stepPhase = 'check-mid';
+            return;
+        }
+
+        if (stepPhase === 'check-mid') {
+            const midValue = currentArray[mid];
+
+            if (midValue === mid) {
+                document.getElementById(`cell-${mid}`).className = 'cell found-cell';
+                msgBox.innerHTML = `<span style="color:#27ae60; font-size:1.2rem;">נמצאה נקודת שבת! באינדקס ${mid} הערך הוא ${midValue}. [Enter למעבר למערך הבא]</span>`;
+                endOfSimulationScenario();
+            } 
+            else if (midValue > mid) {
+                msgBox.innerHTML = `מכיוון ש- A[${mid}] (${midValue}) &gt; ${mid}, נקודת השבת לא יכולה להיות מימין. <br><strong>high</strong> עובר ל- mid - 1 (${mid - 1}) [Enter לעדכון]`;
+                high = mid - 1;
+                stepPhase = 'update-range';
+            } 
+            else {
+                msgBox.innerHTML = `מכיוון ש- A[${mid}] (${midValue}) &lt; ${mid}, נקודת השבת לא יכולה להיות משמאל. <br><strong>low</strong> עובר ל- mid + 1 (${mid + 1}) [Enter לעדכון]`;
+                low = mid + 1;
+                stepPhase = 'update-range';
+            }
+            return;
+        }
+
+        if (stepPhase === 'update-range') {
+            if (low > high) {
+                msgBox.innerHTML = `<span style="color:#e74c3c;">האינדקסים חצו (low > high). אין במערך נקודת שבת! [Enter למעבר למערך הבא]</span>`;
+                colorArrayRanges();
+                mid = -1;
+                updatePointersDisplay();
+                endOfSimulationScenario();
+            } else {
+                colorArrayRanges();
+                mid = -1; 
+                updatePointersDisplay();
+                msgBox.innerText = `הטווח עודכן (ירוק = פעיל, אדום = נפסל). לחץ Enter לחישוב ה-mid הבא.`;
+                stepPhase = 'calculate-mid';
+            }
+            return;
+        }
+    }
+
+    function endOfSimulationScenario() {
+        if (currentStage === 1) {
+            currentStage = 2;
+            
+            const switchToSecondArray = function() {
+                document.getElementById('simulation-title').innerText = "מערך 2: אין נקודת שבת במערך (מוגרל)";
+                document.getElementById('status-msg').innerText = "המערך השני (ללא נקודת שבת) הוגרל. לחץ Enter כדי להתחיל...";
+                
+                const randomArr2 = generateArrayWithoutFixedPoint(20);
+                initArrayDisplay(randomArr2);
+                
+                window.currentAction = nextStep; 
+            };
+            
+            window.currentAction = switchToSecondArray;
+        } else {
+            document.getElementById('status-msg').innerHTML = "<span style='color:#34495e;'>הסימולציה הסתיימה! לרענון והגרלה מחדש לחץ F5 במקלדת.</span>";
+            window.currentAction = null; 
+        }
+    }
+
+    window.currentAction = nextStep;
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' || event.keyCode === 13) {
+            event.preventDefault(); 
+            if (window.currentAction) {
+                window.currentAction();
+            }
+        }
+    });
+
+    window.onload = function() {
+        const randomArr1 = generateArrayWithFixedPoint(20);
+        initArrayDisplay(randomArr1);
+    };
+</script>
+
+</body>
+</html>
