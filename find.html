@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>חיפוש במטריצה ממויינת</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #333;
+        }
+        #controls {
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            font-size: 16px;
+            text-align: center;
+        }
+        button {
+            padding: 6px 12px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #status-container {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #steps-counter {
+            color: #007bff;
+        }
+        #message {
+            color: #28a745;
+            min-height: 24px;
+        }
+        
+        /* מיכל חיצוני שמכריח כיוון שמאל-לימין */
+        #matrix-wrapper {
+            direction: ltr !important;
+            unicode-bidi: bidi-override;
+            position: relative;
+            background: #fff;
+            padding: 5px;
+            border: 2px solid #ccc;
+            display: inline-block;
+        }
+        
+        #matrix {
+            display: grid;
+            grid-template-columns: repeat(16, 40px);
+            grid-template-rows: repeat(16, 40px);
+            gap: 0;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e0e0e0;
+            box-sizing: border-box;
+            font-size: 13px;
+            font-weight: 500;
+            background-color: #ffffff;
+            transition: background-color 0.2s;
+        }
+        /* צביעת האזור הרלוונטי בירוק בהיר */
+        .active-region {
+            background-color: #d4edda !important;
+        }
+        /* צביעת התא הנבדק כרגע */
+        .checking-cell {
+            background-color: #ffc107 !important; 
+            font-weight: bold;
+            animation: pulse 0.5s infinite alternate;
+        }
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+        /* קווי חלוקה אדומים דינמיים */
+        .grid-line {
+            position: absolute;
+            background-color: red;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>חיפוש במטריצה ממויינת</h1>
+    
+    <div id="controls">
+        <label for="search-input">ערך לחיפוש (0-1000):</label>
+        <input type="number" id="search-input" min="0" max="1000">
+        <button id="start-btn" onclick="startSearch()">החל חיפוש</button>
+        <button onclick="initGame()">הגרל מטריצה חדשה</button>
+    </div>
+
+    <div id="status-container">
+        <div>צעדי מיקוד/רקורסיה: <span id="steps-counter">0</span></div>
+        <div id="message">הזן ערך ולחץ Enter או על כפתור החיפוש. לקידום החיפוש לחץ Enter.</div>
+    </div>
+
+    <div id="matrix-wrapper">
+        <div id="matrix"></div>
+        <div id="lines-overlay"></div>
+    </div>
+
+<script>
+    const SIZE = 16;
+    let matrix = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+    let target = null;
+    let searchQueue = [];
+    let currentQueueIndex = 0;
+    let stepCount = 0;
+    let isSearching = false;
+
+    window.onload = initGame;
+
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); 
+            if (!isSearching) {
+                startSearch();
+            } else {
+                nextStep();
+            }
+        }
+    });
+
+    function initGame() {
+        generateMatrix();
+        renderMatrix();
+        resetSearchState();
+        document.getElementById('search-input').value = '';
+        document.getElementById('message').innerText = "מטריצה חדשה הוגרלה. הזן ערך לחיפוש ולחץ Enter.";
+    }
+
+    function resetSearchState() {
+        searchQueue = [];
+        currentQueueIndex = 0;
+        stepCount = 0;
+        document.getElementById('steps-counter').innerText = stepCount;
+        isSearching = false;
+        clearHighlights();
+    }
+
+    function generateMatrix() {
+        let pool = [];
+        while(pool.length < SIZE * SIZE) {
+            let r = Math.floor(Math.random() * 1001);
+            if(!pool.includes(r)) {
+                pool.push(r);
+            }
+        }
+        pool.sort((a, b) => a - b);
+
+        let poolIndex = 0;
+        function fillQuadrant(row, col, size) {
+            if (size === 1) {
+                matrix[row][col] = pool[poolIndex++];
+                return;
+            }
+            let half = size / 2;
+            fillQuadrant(row, col, half);
+            fillQuadrant(row, col + half, half);
+            fillQuadrant(row + half, col, half);
+            fillQuadrant(row + half, col + half, half);
+        }
+        fillQuadrant(0, 0, SIZE);
+    }
+
+    function renderMatrix() {
+        const matrixDiv = document.getElementById('matrix');
+        matrixDiv.innerHTML = '';
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `cell-${r}-${c}`;
+                cell.innerText = matrix[r][c];
+                matrixDiv.appendChild(cell);
+            }
+        }
+        document.getElementById('lines-overlay').innerHTML = '';
+    }
+
+    function clearHighlights() {
+        const cells = document.querySelectorAll('.cell');
+        cells.forEach(c => {
+            c.classList.remove('active-region', 'checking-cell');
+        });
+        document.getElementById('lines-overlay').innerHTML = '';
+    }
+
+    function startSearch() {
+        const inputVal = document.getElementById('search-input').value;
+        if (inputVal === '') {
+            alert('אנא הכנס ערך לחיפוש');
+            return;
+        }
+        target = parseInt(inputVal);
+        resetSearchState();
+        isSearching = true;
+
+        // שלב 0: צביעה ראשונית של כל המטריצה וחלוקה לקווים אדומים
+        searchQueue.push({
+            type: 'HIGHLIGHT_REGION',
+            row: 0, col: 0, size: SIZE,
+            incrementStep: false
+        });
+
+        buildSearchQueue(0, 0, SIZE);
+
+        if (searchQueue.length > 0) {
+            nextStep(); 
+        } else {
+            document.getElementById('message').innerText = "החיפוש הסתיים ללא תוצאות.";
+        }
+    }
+
+    function buildSearchQueue(row, col, size) {
+        if (size === 2) {
+            const coords = [
+                {r: row, c: col},       
+                {r: row, c: col+1},     
+                {r: row+1, c: col},     
+                {r: row+1, c: col+1}    
+            ];
+
+            for (let coord of coords) {
+                searchQueue.push({
+                    type: 'CHECK_CELL',
+                    row: coord.r, col: coord.c,
+                    isFinal2x2: true
+                });
+            }
+            return;
+        }
+
+        let half = size / 2;
+        let quadrants = [
+            { name: 'שמאל-עליון',  r: row,        c: col },
+            { name: 'ימין-עליון',  r: row,        c: col + half },
+            { name: 'שמאל-תחתון',  r: row + half, c: col },
+            { name: 'ימין-תחתון',  r: row + half, c: col + half }
+        ];
+
+        let chosenQuadrant = null;
+
+        for (let quad of quadrants) {
+            let brRow = quad.r + half - 1;
+            let brCol = quad.c + half - 1;
+
+            searchQueue.push({
+                type: 'CHECK_CELL',
+                row: brRow, col: brCol,
+                quadrantInfo: quad,
+                isFinal2x2: false
+            });
+
+            let brValue = matrix[brRow][brCol];
+            
+            if (target === brValue) {
+                return; 
+            }
+            
+            if (target < brValue) {
+                chosenQuadrant = quad;
+                break; 
+            }
+        }
+
+        if (chosenQuadrant) {
+            searchQueue.push({
+                type: 'HIGHLIGHT_REGION',
+                row: chosenQuadrant.r, col: chosenQuadrant.c, size: half,
+                incrementStep: true 
+            });
+            buildSearchQueue(chosenQuadrant.r, chosenQuadrant.c, half);
+        } else {
+            searchQueue.push({ type: 'NOT_FOUND' });
+        }
+    }
+
+    function nextStep() {
+        if (!isSearching || currentQueueIndex >= searchQueue.length) {
+            return;
+        }
+
+        let step = searchQueue[currentQueueIndex];
+        currentQueueIndex++;
+
+        if (step.type === 'HIGHLIGHT_REGION') {
+            if (step.incrementStep) {
+                stepCount++;
+                document.getElementById('steps-counter').innerText = stepCount;
+            }
+            
+            clearHighlights();
+            highlightRegion(step.row, step.col, step.size);
+            drawRedLines(step.row, step.col, step.size);
+            document.getElementById('message').innerText = `מתמקדים בתת-מטריצה בגודל ${step.size}x${step.size}. לחץ Enter לבדיקת הפינות שלה.`;
+            
+        } else if (step.type === 'CHECK_CELL') {
+            const prevChecking = document.querySelector('.checking-cell');
+            if (prevChecking) prevChecking.classList.remove('checking-cell');
+
+            const cell = document.getElementById(`cell-${step.row}-${step.col}`);
+            cell.classList.add('checking-cell');
+
+            let cellValue = matrix[step.row][step.col];
+
+            if (target === cellValue) {
+                document.getElementById('message').innerText = `נמצא! הערך ${target} נמצא בתא [${step.row}, ${step.col}]. החיפוש הסתיים.`;
+                cell.style.backgroundColor = "#28a745"; 
+                isSearching = false;
+                return;
+            }
+
+            if (step.isFinal2x2) {
+                document.getElementById('message').innerText = `מטריצה 2x2: משווים לתא [${step.row}, ${step.col}] שערכו ${cellValue}.`;
+                if (isLast2x2Check()) {
+                    isSearching = false;
+                    setTimeout(() => {
+                        document.getElementById('message').innerText = `הערך ${target} לא נמצא במטריצה. החיפוש הסתיים.`;
+                    }, 100);
+                }
+            } else {
+                document.getElementById('message').innerText = `משווים לפינה ימנית-תחתונה של רבע ${step.quadrantInfo.name} (ערך: ${cellValue}).`;
+            }
+
+        } else if (step.type === 'NOT_FOUND') {
+            document.getElementById('message').innerText = `הערך ${target} גדול מהערך המקסימלי באזור הרלוונטי. לא נמצא.`;
+            isSearching = false;
+        }
+    }
+
+    function isLast2x2Check() {
+        if (currentQueueIndex >= searchQueue.length) return true;
+        return searchQueue[currentQueueIndex].type !== 'CHECK_CELL';
+    }
+
+    function highlightRegion(startRow, startCol, size) {
+        for (let r = startRow; r < startRow + size; r++) {
+            for (let c = startCol; c < startCol + size; c++) {
+                document.getElementById(`cell-${r}-${c}`).classList.add('active-region');
+            }
+        }
+    }
+
+    function drawRedLines(startRow, startCol, size) {
+        const overlay = document.getElementById('lines-overlay');
+        if (size <= 1) return;
+
+        const cellSize = 40; 
+        const top = startRow * cellSize;
+        const left = startCol * cellSize;
+        const width = size * cellSize;
+        const height = size * cellSize;
+        const midX = left + (width / 2);
+        const midY = top + (height / 2);
+
+        // קו אופקי
+        const hLine = document.createElement('div');
+        hLine.className = 'grid-line';
+        hLine.style.top = `${midY}px`;
+        hLine.style.left = `${left}px`;
+        hLine.style.width = `${width}px`;
+        hLine.style.height = `2px`;
+        overlay.appendChild(hLine);
+
+        // קו אנכי
+        const vLine = document.createElement('div');
+        vLine.className = 'grid-line';
+        vLine.style.top = `${top}px`;
+        vLine.style.left = `${midX}px`;
+        vLine.style.width = `2px`;
+        vLine.style.height = `${height}px`;
+        overlay.appendChild(vLine);
+    }
+</script>
+
+</body>
+</html>
