@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מציאת הפרש מקסימלי בין ממוצעי שני חלקי המערך</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 20px;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .instruction {
+            background-color: #e8f4f8;
+            padding: 10px 15px;
+            border-right: 5px solid #2980b9;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .array-container {
+            display: flex;
+            flex-direction: row;
+            direction: ltr; 
+            gap: 5px;
+            margin-bottom: 25px;
+            justify-content: space-between;
+            flex-wrap: nowrap;
+            width: 100%;
+        }
+        .array-item {
+            flex: 1;
+            min-width: 35px;
+            max-width: 48px;
+            height: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .array-val {
+            direction: ltr;
+            unicode-bidi: bidi-override;
+        }
+        .array-item .index {
+            font-size: 9px;
+            color: #7f8c8d;
+            position: absolute;
+            bottom: 2px;
+        }
+        .array-item.left-part {
+            background-color: #d5f5e3;
+            border-color: #2ecc71;
+        }
+        .array-item.right-part {
+            background-color: #fdebd0;
+            border-color: #f39c12;
+        }
+        .array-item.current-pointer {
+            border: 3px dashed #e74c3c;
+            transform: scale(1.03);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #fff;
+            table-layout: fixed;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            vertical-align: top;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+            text-align: center;
+        }
+        .var-row {
+            margin: 8px 0;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 4px;
+        }
+        .var-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .var-val {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            color: #2980b9;
+            direction: ltr;
+            unicode-bidi: bidi-override;
+        }
+        
+        .status-msg {
+            font-size: 18px;
+            margin-top: 15px;
+            font-weight: bold;
+            color: #c0392b;
+            text-align: center;
+            min-height: 27px;
+        }
+        .btn-panel {
+            text-align: center;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            color: white;
+        }
+        .btn-step {
+            background-color: #2ecc71;
+        }
+        .btn-step:hover {
+            background-color: #27ae60;
+        }
+        .btn-reload {
+            background-color: #3498db;
+        }
+        .btn-reload:hover {
+            background-color: #2980b9;
+        }
+        .btn-restart {
+            background-color: #e67e22;
+        }
+        .btn-restart:hover {
+            background-color: #d35400;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>מציאת הפרש מקסימלי בין ממוצעי שני חלקי המערך</h1>
+    <div class="instruction">
+        לחץ על מקש <strong>Enter</strong> (או על הכפתור "צעד הבא") כדי להתקדם שלב אחר שלב באלגוריתם.
+    </div>
+
+    <div class="btn-panel">
+        <button id="stepBtn" class="btn-step" onclick="processNextStep()">צעד הבא (Enter)</button>
+        <button id="restartBtn" class="btn-restart" onclick="restartCurrentSimulation()">הרץ מחדש על המערך הנוכחי</button>
+        <button class="btn-reload" onclick="generateNewSimulation()">הגרל מערך חדש</button>
+    </div>
+
+    <div id="statusMessage" class="status-msg">טוען...</div>
+
+    <h2>המערך (משמאל לימין):</h2>
+    <div id="arrayVisual" class="array-container"></div>
+
+    <h2>מעקב משתנים:</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 33%;">החלק הימני (Right)</th>
+                <th style="width: 34%;">משתנים כלליים</th>
+                <th style="width: 33%;">החלק השמאלי (Left)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <div class="var-row"><span class="var-name">rightSum:</span><span id="val-rightSum" class="var-val">-</span></div>
+                    <div class="var-row"><span class="var-name">rightSubArraySize:</span><span id="val-rightSubArraySize" class="var-val">-</span></div>
+                    <div class="var-row"><span class="var-name">rightAverage:</span><span id="val-rightAverage" class="var-val">-</span></div>
+                </td>
+                
+                <td>
+                    <div class="var-row"><span class="var-name">totalSum:</span><span id="val-totalSum" class="var-val">-</span></div>
+                    <div class="var-row"><span class="var-name">currentLocation:</span><span id="val-currentLocation" class="var-val">-</span></div>
+                    <div class="var-row"><span class="var-name">tempDiff:</span><span id="val-tempDiff" class="var-val">-</span></div>
+                    <div class="var-row"><span class="var-name">bestDiff:</span><span id="val-bestDiff" class="var-val">-</span></div>
+                    <div class="var-row"><span class="var-name">bestLocation:</span><span id="val-bestLocation" class="var-val">-</span></div>
+                </td>
+                
+                <td>
+                    <div class="var-row"><span class="var-name">leftSum:</span><span id="val-leftSum" class="var-val">-</span></div>
+                    <div class="var-row"><span class="var-name">leftSubArraySize:</span><span id="val-leftSubArraySize" class="var-val">-</span></div>
+                    <div class="var-row"><span class="var-name">leftAverage:</span><span id="val-leftAverage" class="var-val">-</span></div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    let array = [];
+    let totalSum = 0;
+    let currentLocation = 0;
+    
+    let leftSum = 0;
+    let leftSubArraySize = 0;
+    let leftAverage = 0;
+
+    let rightSum = 0;
+    let rightSubArraySize = 0;
+    let rightAverage = 0;
+
+    let bestLocation = 0;
+    let bestDiff = 0;
+    let tempDiff = "-";
+    let simStep = 0; 
+
+    function generateRandomArray() {
+        array = [];
+        for (let i = 0; i < 20; i++) {
+            let num = Math.floor(Math.random() * 101) - 50;
+            array.push(num);
+        }
+    }
+
+    function renderArray() {
+        const container = document.getElementById('arrayVisual');
+        container.innerHTML = '';
+        
+        array.forEach((val, idx) => {
+            const item = document.createElement('div');
+            item.className = 'array-item';
+            item.innerHTML = `<span class="array-val">${val}</span><span class="index">${idx}</span>`;
+            
+            if (simStep > 0 && simStep < 3) {
+                if (idx <= currentLocation) {
+                    item.classList.add('left-part');
+                } else {
+                    item.classList.add('right-part');
+                }
+                if (idx === currentLocation) {
+                    item.classList.add('current-pointer');
+                }
+            } else if (simStep === 3) {
+                if (idx <= bestLocation) {
+                    item.classList.add('left-part');
+                } else {
+                    item.classList.add('right-part');
+                }
+            }
+            container.appendChild(item);
+        });
+    }
+
+    function updateTable() {
+        // עמודה אמצעית
+        document.getElementById('val-totalSum').innerText = totalSum;
+        document.getElementById('val-currentLocation').innerText = simStep === 0 ? '-' : currentLocation;
+        document.getElementById('val-tempDiff').innerText = (typeof tempDiff === 'number') ? tempDiff.toFixed(4) : tempDiff;
+        document.getElementById('val-bestDiff').innerText = simStep === 0 ? '-' : bestDiff.toFixed(4);
+        document.getElementById('val-bestLocation').innerText = simStep === 0 ? '-' : bestLocation;
+
+        // עמודה שמאלית במסך (Left)
+        document.getElementById('val-leftSum').innerText = simStep === 0 ? '-' : leftSum;
+        document.getElementById('val-leftSubArraySize').innerText = simStep === 0 ? '-' : leftSubArraySize;
+        document.getElementById('val-leftAverage').innerText = simStep === 0 ? '-' : leftAverage.toFixed(4);
+
+        // עמודה ימנית במסך (Right)
+        document.getElementById('val-rightSum').innerText = simStep === 0 ? '-' : rightSum;
+        document.getElementById('val-rightSubArraySize').innerText = simStep === 0 ? '-' : rightSubArraySize;
+        document.getElementById('val-rightAverage').innerText = simStep === 0 ? '-' : rightAverage.toFixed(4);
+    }
+
+    function initAlgorithmVariables() {
+        totalSum = 0;
+        currentLocation = 0;
+        leftSum = 0;
+        leftSubArraySize = 0;
+        leftAverage = 0;
+        rightSum = 0;
+        rightSubArraySize = 0;
+        rightAverage = 0;
+        bestLocation = 0;
+        bestDiff = 0;
+        tempDiff = "-";
+        simStep = 0;
+        
+        for (let i = 0; i < array.length; i++) {
+            totalSum += array[i];
+        }
+        
+        document.getElementById('stepBtn').disabled = false;
+        document.getElementById('stepBtn').innerText = "צעד הבא (Enter)";
+    }
+
+    function generateNewSimulation() {
+        generateRandomArray();
+        initAlgorithmVariables();
+        
+        document.getElementById('statusMessage').style.color = "#c0392b";
+        document.getElementById('statusMessage').innerText = "מערך חדש הוגרל. לחץ Enter כדי לבצע את הצעד הראשוני (currentLocation = 0)";
+        
+        renderArray();
+        updateTable();
+    }
+
+    function restartCurrentSimulation() {
+        initAlgorithmVariables();
+        
+        document.getElementById('statusMessage').style.color = "#c0392b";
+        document.getElementById('statusMessage').innerText = "הסימולציה אותחלה על אותו המערך. לחץ Enter כדי לבצע את הצעד הראשוני";
+        
+        renderArray();
+        updateTable();
+    }
+
+    function processNextStep() {
+        if (simStep === 3) return;
+
+        if (simStep === 0) {
+            currentLocation = 0;
+            
+            leftSum = array[currentLocation];
+            leftSubArraySize = currentLocation + 1;
+            leftAverage = leftSum / leftSubArraySize;
+
+            rightSum = totalSum - array[currentLocation];
+            rightSubArraySize = array.length - leftSubArraySize;
+            rightAverage = rightSum / rightSubArraySize;
+            
+            bestLocation = 0;
+            bestDiff = Math.abs(leftAverage - rightAverage);
+            tempDiff = bestDiff;
+            
+            document.getElementById('statusMessage').innerText = "חושב המיקום ה-0. לחץ Enter כדי להיכנס ללולאת ה-for (currentLocation = 1)";
+            simStep = 1;
+            
+        } else if (simStep === 1 || simStep === 2) {
+            if (simStep === 1) {
+                currentLocation = 1;
+                simStep = 2; 
+            } else {
+                currentLocation++;
+            }
+
+            if (currentLocation < array.length - 1) {
+                leftSum += array[currentLocation];
+                leftSubArraySize = currentLocation + 1;
+                leftAverage = leftSum / leftSubArraySize;
+
+                rightSum -= array[currentLocation];
+                rightSubArraySize = array.length - leftSubArraySize;
+                rightAverage = rightSum / rightSubArraySize;
+                
+                tempDiff = Math.abs(leftAverage - rightAverage);
+                
+                if (tempDiff > bestDiff) {
+                    bestDiff = tempDiff;
+                    bestLocation = currentLocation;
+                    document.getElementById('statusMessage').innerText = `איטרציה i=${currentLocation}: נמצא הפרש טוב יותר! מעדכן את bestLocation.`;
+                } else {
+                    document.getElementById('statusMessage').innerText = `איטרציה i=${currentLocation}: ההפרש לא גבוה מ-bestDiff.`;
+                }
+            } else {
+                simStep = 3;
+                document.getElementById('statusMessage').style.color = "#27ae60";
+                document.getElementById('statusMessage').innerText = `האלגוריתם הסתיים! המיקום האופטימלי להחזרה הוא: ${bestLocation}`;
+                document.getElementById('stepBtn').disabled = true;
+                document.getElementById('stepBtn').innerText = "הסימולציה הסתיימה";
+            }
+        }
+        
+        renderArray();
+        updateTable();
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); 
+            processNextStep();
+        }
+    });
+
+    window.onload = generateNewSimulation;
+</script>
+
+</body>
+</html>
