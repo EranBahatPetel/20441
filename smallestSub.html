@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>smallestSub</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background-color: #f4f6f9;
+            color: #333;
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .input-container {
+            margin: 30px 0;
+        }
+        input {
+            padding: 8px;
+            font-size: 16px;
+            width: 100px;
+            text-align: center;
+            border: 2px solid #bdc3c7;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 15px;
+            font-size: 16px;
+            background-color: #34495e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #2c3e50;
+        }
+        .visualization-container {
+            direction: ltr; 
+            position: relative;
+            margin: 20px auto 40px auto;
+            display: inline-block;
+            white-space: nowrap;
+        }
+        .pointers-row {
+            height: 30px;
+            position: relative;
+            margin-bottom: 5px;
+        }
+        .pointer {
+            position: absolute;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        .pointer.l { color: #e74c3c; }
+        .pointer.r { color: #2ecc71; }
+        .pointer.both { color: #9b59b6; }
+
+        .array-container {
+            display: flex;
+            justify-content: flex-start;
+        }
+        .array-cell {
+            width: 45px;
+            height: 45px;
+            border: 2px solid #34495e;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: background-color 0.3s;
+        }
+        .array-cell.highlight {
+            background-color: #ffeaa7;
+        }
+        .stats-container {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            display: inline-block;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stats-container span {
+            margin: 0 15px;
+        }
+        .instructions {
+            margin-top: 20px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .result-message {
+            margin-top: 25px;
+            font-size: 22px;
+            color: #27ae60;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>smallestSub</h1>
+
+    <div class="visualization-container" id="visualizer">
+        <div class="pointers-row" id="pointersRow"></div>
+        <div class="array-container" id="arrayContainer"></div>
+    </div>
+
+    <div class="input-container">
+        <label for="kInput">הכנס ערך עבור K: </label>
+        <input type="number" id="kInput" min="1">
+        <button id="resetBtn" style="display: none;" onclick="resetAlgorithm()">הפעל מהתחלה</button>
+    </div>
+
+    <div class="stats-container" id="statsContainer" style="display: none;">
+        sum: <span id="statSum">0</span> | 
+        min: <span id="statMin">0</span> | 
+        count: <span id="statCount">0</span>
+    </div>
+
+    <div class="instructions" id="instructions" style="display: none;">
+        לחץ על <strong>Enter</strong> כדי לבצע את השלב הבא באלגוריתם...
+    </div>
+
+    <div class="result-message" id="resultMessage"></div>
+
+    <script>
+        const arr = [];
+        for (let i = 0; i < 20; i++) {
+            arr.push(Math.floor(Math.random() * 50) + 1);
+        }
+
+        let l, r, sum, count, min, k;
+        let isRunning = false;
+        let isFinished = false;
+        let isInitialized = false; 
+
+        const kInput = document.getElementById('kInput');
+        const resetBtn = document.getElementById('resetBtn');
+        const arrayContainer = document.getElementById('arrayContainer');
+        const pointersRow = document.getElementById('pointersRow');
+        const statsContainer = document.getElementById('statsContainer');
+        const instructions = document.getElementById('instructions');
+        const resultMessage = document.getElementById('resultMessage');
+
+        function renderInitialArray() {
+            arrayContainer.innerHTML = '';
+            arr.forEach((val, idx) => {
+                const cell = document.createElement('div');
+                cell.className = 'array-cell';
+                cell.id = `cell-${idx}`;
+                cell.innerText = val;
+                arrayContainer.appendChild(cell);
+            });
+        }
+        renderInitialArray();
+
+        // שלב האתחול בלבד
+        function initAlgorithm() {
+            k = parseInt(kInput.value);
+            if (isNaN(k) || k <= 0) {
+                alert("אנא הכנס מספר שלם חיובי עבור K");
+                return;
+            }
+
+            kInput.disabled = true;
+            resetBtn.style.display = 'inline-block';
+            resultMessage.innerText = '';
+            
+            l = 0;
+            r = 1;
+            sum = arr[0];
+            count = 1;
+            min = arr.length;
+
+            isInitialized = true;
+            isRunning = true;
+            isFinished = false;
+            
+            statsContainer.style.display = 'inline-block';
+            instructions.style.display = 'block';
+
+            updateUI();
+        }
+
+        // האזנה ל-Enter בתוך תיבת הקלט ומניעת בעבוע
+        kInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation(); // מונע מהאירוע להגיע ל-document ולבצע צעד מיד
+                if (isInitialized) return;
+                initAlgorithm();
+            }
+        });
+
+        function resetAlgorithm() {
+            kInput.disabled = false;
+            isInitialized = false;
+            isRunning = false;
+            isFinished = false;
+            
+            pointersRow.innerHTML = '';
+            statsContainer.style.display = 'none';
+            instructions.style.display = 'none';
+            resultMessage.innerText = '';
+            for (let i = 0; i < arr.length; i++) {
+                document.getElementById(`cell-${i}`).classList.remove('highlight');
+            }
+        }
+
+        // האזנה גלובלית לצעדים הבאים
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && isRunning && !isFinished && document.activeElement !== resetBtn) {
+                e.preventDefault(); 
+                stepAlgorithm();
+            }
+        });
+
+        function stepAlgorithm() {
+            if (l <= r) {
+                if (sum <= k) {
+                    if (r === arr.length) {
+                        endAlgorithm();
+                        return;
+                    }
+                    sum += arr[r];
+                    r++;
+                    count++;
+                } else {
+                    min = Math.min(min, count);
+                    sum -= arr[l];
+                    l++;
+                    count--;
+                }
+                
+                updateUI();
+
+                if (!(l <= r)) {
+                    endAlgorithm();
+                }
+            } else {
+                endAlgorithm();
+            }
+        }
+
+        function endAlgorithm() {
+            isRunning = false;
+            isFinished = true;
+            instructions.style.display = 'none';
+
+            let returnedValue = (l === 0 && r === arr.length) ? (min + 1) : min;
+            
+            if (returnedValue > arr.length) {
+                returnedValue = arr.length;
+            }
+            
+            resultMessage.innerText = `החיפוש הסתיים. הערך המוחזר: ${returnedValue}`;
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('statSum').innerText = sum;
+            document.getElementById('statMin').innerText = min;
+            document.getElementById('statCount').innerText = count;
+
+            for (let i = 0; i < arr.length; i++) {
+                const cell = document.getElementById(`cell-${i}`);
+                if (cell) cell.classList.remove('highlight');
+            }
+
+            for (let i = l; i < r; i++) {
+                const cell = document.getElementById(`cell-${i}`);
+                if (cell) cell.classList.add('highlight');
+            }
+
+            pointersRow.innerHTML = '';
+            const cellWidth = 45; 
+            
+            if (l < arr.length) {
+                const lPointer = document.createElement('div');
+                lPointer.className = 'pointer l';
+                lPointer.innerText = 'l';
+                lPointer.style.left = `${(l * cellWidth) + (cellWidth / 2)}px`;
+                pointersRow.appendChild(lPointer);
+            }
+
+            const rPointer = document.createElement('div');
+            rPointer.className = 'pointer r';
+            rPointer.innerText = 'r';
+            rPointer.style.left = `${(r * cellWidth) + (cellWidth / 2)}px`;
+            pointersRow.appendChild(rPointer);
+
+            if (l === r) {
+                pointersRow.innerHTML = '';
+                const bothPointer = document.createElement('div');
+                bothPointer.className = 'pointer both';
+                bothPointer.innerText = 'l,r';
+                bothPointer.style.left = `${(l * cellWidth) + (cellWidth / 2)}px`;
+                pointersRow.appendChild(bothPointer);
+            }
+        }
+    </script>
+</body>
+</html>
