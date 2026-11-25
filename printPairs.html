@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>סימולציית Two Pointers - מציאת זוגות בהפרש K</title>
+    <title>סימולציה - מציאת זוגות בהפרש K</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -106,7 +106,7 @@
             margin: 0 3px; 
             border-radius: 4px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            direction: ltr; /* מבטיח שהמינוס בתוך התא תמיד משמאל */
+            direction: ltr;
         }
         .cell-index {
             position: absolute;
@@ -195,7 +195,7 @@
 </head>
 <body>
 
-    <h1>סימולציית Two Pointers - מציאת זוגות</h1>
+    <h1>מציאת זוגות בהפרש K</h1>
 
     <div class="controls">
         <label for="kInput">הפרש מבוקש (k): </label>
@@ -229,7 +229,6 @@
         let searchActive = false;
         let searchFinished = false;
 
-        // פונקציית עזר לעיצוב מספר שלילי עם סוגריים בכיוון LTR תקין
         function formatNum(num) {
             return num < 0 ? `(${num})` : `${num}`;
         }
