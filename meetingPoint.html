@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>meetingPoint</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 20px;
+            color: #333;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-bottom: 25px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .instructions {
+            background-color: #e8f4fd;
+            border-right: 4px solid #3498db;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #bdc3c7;
+            background-color: white;
+            cursor: pointer;
+        }
+        button {
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #d35400;
+        }
+        button.new-data-btn {
+            background-color: #3498db;
+        }
+        button.new-data-btn:hover {
+            background-color: #2980b9;
+        }
+        .example-section {
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 30px;
+            background-color: #fafafa;
+            display: none;
+        }
+        .example-section.active {
+            display: block;
+        }
+        .example-section.success { border-right: 8px solid #2ecc71; }
+        .example-section.fail { border-right: 8px solid #e74c3c; }
+
+        .visualization-matrix {
+            display: flex;
+            flex-direction: row;
+            direction: ltr; 
+            margin: 20px 0;
+            overflow-x: auto;
+            padding-bottom: 15px;
+        }
+        
+        .labels-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            margin-right: 15px;
+            padding-top: 20px; 
+            gap: 15px;
+        }
+        .label-item {
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .matrix-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 42px; 
+            flex-shrink: 0;
+        }
+        
+        .index-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .cell {
+            width: 38px;
+            height: 38px;
+            border: 1px solid #7f8c8d;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            direction: ltr;
+            unicode-bidi: isolate;
+        }
+        
+        .cell.mid-target { background-color: #f1c40f; color: #000; }
+        .cell.match { background-color: #2ecc71 !important; color: white; }
+        .cell.out-of-bounds { background-color: #e0e0e0; color: #95a5a6; opacity: 0.5; }
+
+        .pointer-space {
+            height: 45px;
+            position: relative;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 5px;
+        }
+        
+        .pointer-tag {
+            font-size: 11px;
+            font-weight: bold;
+            padding: 1px 4px;
+            border-radius: 3px;
+            color: white;
+            white-space: nowrap;
+            margin-bottom: 2px;
+            z-index: 10;
+            text-align: center;
+            width: 90%;
+        }
+        .pointer-tag.low { background-color: #e67e22; }
+        .pointer-tag.high { background-color: #9b59b6; }
+        .pointer-tag.mid { background-color: #f1c40f; color: black; }
+
+        .status-box {
+            background-color: #eaeded;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-line;
+            font-size: 14px;
+            border-left: 4px solid #34495e;
+            margin-top: 15px;
+            direction: rtl;
+        }
+        
+        .num-val {
+            direction: ltr;
+            display: inline-block;
+            unicode-bidi: isolate;
+        }
+
+        .result-message {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+            direction: rtl;
+        }
+        .result-message.success { background-color: #d4edda; color: #155724; display: block; }
+        .result-message.fail { background-color: #f8d7da; color: #721c24; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>meetingPoint</h1>
+    <p>חיפוש האינדקס המינימלי i עבורו a[i] == b[i] במערך a (בסדר לא עולה) ובמערך b (בסדר לא יורד).</p>
+    
+    <div class="controls">
+        <div class="instructions">⌨️ להתקדמות באלגוריתם: לחץ על מקש Enter במקלדת.</div>
+        
+        <label for="example-selector"><strong>בחר סוג דוגמה:</strong></label>
+        <select id="example-selector" onchange="switchExample()">
+            <option value="ex1">דוגמה 1: קיימת נקודת מפגש (איבר זהה)</option>
+            <option value="ex2">דוגמה 2: לא קיימת נקודת מפגש</option>
+        </select>
+
+        <button onclick="resetCurrent()">הרצה מחדש (מערכים נוכחיים)</button>
+        <button class="new-data-btn" onclick="initSimulations()">הגרל מערכים חדשים</button>
+    </div>
+
+    <div class="example-section success active" id="ex1">
+        <h2>דוגמה 1: קיימת נקודת מפגש (a[i] == b[i])</h2>
+        <div style="display: flex;">
+            <div class="labels-column">
+                <div class="label-item">a:</div>
+                <div class="label-item">b:</div>
+            </div>
+            <div class="visualization-matrix" id="ex1-matrix"></div>
+        </div>
+        <div class="status-box" id="ex1-status">לחץ על Enter כדי להתחיל את הריצה.</div>
+        <div class="result-message" id="ex1-result"></div>
+    </div>
+
+    <div class="example-section fail" id="ex2">
+        <h2>דוגמה 2: לא קיימת נקודת מפגש</h2>
+        <div style="display: flex;">
+            <div class="labels-column">
+                <div class="label-item">a:</div>
+                <div class="label-item">b:</div>
+            </div>
+            <div class="visualization-matrix" id="ex2-matrix"></div>
+        </div>
+        <div class="status-box" id="ex2-status">לחץ על Enter כדי להתחיל את הריצה.</div>
+        <div class="result-message" id="ex2-result"></div>
+    </div>
+</div>
+
+<script>
+    class Simulation {
+        constructor(containerId, forceMatch) {
+            this.containerId = containerId;
+            this.forceMatch = forceMatch;
+            this.a = [];
+            this.b = [];
+            this.resetState();
+        }
+
+        resetState() {
+            this.low = 0;
+            this.high = Math.min(this.a.length, this.b.length) - 1;
+            this.mid = -1;
+            this.terminated = false;
+            this.stepCount = 0;
+        }
+
+        generateArrays() {
+            const sizeA = Math.floor(Math.random() * 6) + 20; 
+            const sizeB = Math.floor(Math.random() * 6) + 20;
+
+            let arrA = [];
+            let arrB = [];
+
+            for(let i=0; i<sizeA; i++) arrA.push(Math.floor(Math.random() * 80) - 40); 
+            for(let i=0; i<sizeB; i++) arrB.push(Math.floor(Math.random() * 80) - 40);
+
+            arrA.sort((x, y) => y - x); 
+            arrB.sort((x, y) => x - y); 
+
+            if (this.forceMatch) {
+                const minLen = Math.min(sizeA, sizeB);
+                const targetIdx = Math.floor(Math.random() * (minLen - 6)) + 3; 
+                const commonValue = Math.floor(Math.random() * 30) - 15;
+                
+                arrA[targetIdx] = commonValue;
+                arrB[targetIdx] = commonValue;
+
+                for(let i = targetIdx - 1; i >= 0; i--) {
+                    if(arrA[i] < arrA[i+1]) arrA[i] = arrA[i+1];
+                    if(arrB[i] > arrB[i+1]) arrB[i] = arrB[i+1];
+                }
+                for(let i = targetIdx + 1; i < sizeA; i++) {
+                    if(arrA[i] > arrA[i-1]) arrA[i] = arrA[i-1];
+                }
+                for(let i = targetIdx + 1; i < sizeB; i++) {
+                    if(arrB[i] < arrB[i-1]) arrB[i] = arrB[i-1];
+                }
+            } else {
+                const minLen = Math.min(sizeA, sizeB);
+                for(let i = 0; i < minLen; i++) {
+                    if(arrA[i] === arrB[i]) {
+                        arrA[i] += 2;
+                        if(i > 0 && arrA[i] > arrA[i-1]) arrA[i] = arrA[i-1];
+                    }
+                }
+            }
+
+            this.a = arrA;
+            this.b = arrB;
+            this.resetState();
+        }
+
+        render() {
+            const matrixContainer = document.getElementById(`${this.containerId}-matrix`);
+            matrixContainer.innerHTML = '';
+
+            const maxLen = Math.max(this.a.length, this.b.length);
+            const minLen = Math.min(this.a.length, this.b.length);
+
+            for (let i = 0; i < maxLen; i++) {
+                const column = document.createElement('div');
+                column.className = 'matrix-column';
+
+                const idxLabel = document.createElement('div');
+                idxLabel.className = 'index-label';
+                idxLabel.innerText = i;
+                column.appendChild(idxLabel);
+
+                const cellA = document.createElement('div');
+                cellA.className = 'cell';
+                if (i < this.a.length) {
+                    cellA.innerText = this.a[i];
+                    if (i >= minLen || (!this.terminated && (i < this.low || i > this.high))) {
+                        cellA.classList.add('out-of-bounds');
+                    }
+                    if (i === this.mid && !this.terminated) cellA.classList.add('mid-target');
+                    cellA.id = `${this.containerId}-a-${i}`;
+                } else {
+                    cellA.style.visibility = 'hidden'; 
+                }
+                column.appendChild(cellA);
+
+                const cellB = document.createElement('div');
+                cellB.className = 'cell';
+                if (i < this.b.length) {
+                    cellB.innerText = this.b[i];
+                    if (i >= minLen || (!this.terminated && (i < this.low || i > this.high))) {
+                        cellB.classList.add('out-of-bounds');
+                    }
+                    if (i === this.mid && !this.terminated) cellB.classList.add('mid-target');
+                    cellB.id = `${this.containerId}-b-${i}`;
+                } else {
+                    cellB.style.visibility = 'hidden';
+                }
+                column.appendChild(cellB);
+
+                const pointerSpace = document.createElement('div');
+                pointerSpace.className = 'pointer-space';
+
+                if (!this.terminated && i < minLen) {
+                    if (i === this.low) {
+                        const tag = document.createElement('div');
+                        tag.className = 'pointer-tag low';
+                        tag.innerText = 'low';
+                        pointerSpace.appendChild(tag);
+                    }
+                    if (i === this.high) {
+                        const tag = document.createElement('div');
+                        tag.className = 'pointer-tag high';
+                        tag.innerText = 'high';
+                        pointerSpace.appendChild(tag);
+                    }
+                    if (i === this.mid) {
+                        const tag = document.createElement('div');
+                        tag.className = 'pointer-tag mid';
+                        tag.innerText = 'mid';
+                        pointerSpace.appendChild(tag);
+                    }
+                }
+                column.appendChild(pointerSpace);
+
+                matrixContainer.appendChild(column);
+            }
+        }
+
+        step() {
+            if (this.terminated) return;
+
+            const statusEl = document.getElementById(`${this.containerId}-status`);
+            const resultEl = document.getElementById(`${this.containerId}-result`);
+            
+            this.stepCount++;
+
+            if (this.high < this.low) {
+                statusEl.innerHTML = `איטרציה ${this.stepCount}: התנאי (high >= low) אינו מתקיים עוד (<span class="num-val">${this.high}</span> &lt; <span class="num-val">${this.low}</span>).<br>הלולאה הסתיימה.`;
+                resultEl.innerHTML = `תוצאה: השיטה החזירה <span class="num-val">-1</span> (לא נמצא אינדקס מתאים)`;
+                resultEl.className = "result-message fail";
+                this.terminated = true;
+                this.mid = -1;
+                this.render();
+                return;
+            }
+
+            this.mid = this.low + Math.floor((this.high - this.low) / 2);
+            this.render(); 
+
+            const valA = this.a[this.mid];
+            const valB = this.b[this.mid];
+            
+            let logMsg = `איטרציה ${this.stepCount}: נבדק אינדקס mid = ${this.mid}.<br>`;
+            logMsg += `ערכים: a[${this.mid}] = <span class="num-val">${valA}</span>, b[${this.mid}] = <span class="num-val">${valB}</span>.<br>`;
+
+            const isFirstMatch = (this.mid === 0 || this.a[this.mid - 1] !== this.b[this.mid - 1]);
+            
+            if (isFirstMatch && valA === valB) {
+                logMsg += `נמצא שוויון: a[mid] == b[mid] וזהו המופע הראשון המשותף ללא כפילות קודמת.<br>`;
+                statusEl.innerHTML = logMsg;
+                
+                resultEl.innerHTML = `תוצאה: המפגש המינימלי נמצא באינדקס ${this.mid}! (הערך הוא <span class="num-val">${valA}</span>)`;
+                resultEl.className = "result-message success";
+                
+                document.getElementById(`${this.containerId}-a-${this.mid}`).classList.add('match');
+                document.getElementById(`${this.containerId}-b-${this.mid}`).classList.add('match');
+                
+                this.terminated = true;
+                return;
+            } 
+            
+            if (valA > valB) {
+                logMsg += `מכיוון ש- a[mid] (<span class="num-val">${valA}</span>) &gt; b[mid] (<span class="num-val">${valB}</span>), נקודת המפגש חייבת להימצא מימין.<br>מקדמים: low = mid + 1 (low = ${this.mid + 1})`;
+                this.low = this.mid + 1;
+            } else {
+                if (valA === valB) {
+                    logMsg += `קיים שוויון אך הוא אינו הראשון (קיים שוויון גם משמאל). מחפשים אחורה.<br> `;
+                } else {
+                    logMsg += `מכיוון ש- a[mid] (<span class="num-val">${valA}</span>) &lt; b[mid] (<span class="num-val">${valB}</span>), נקודת המפגש חייבת להימצא משמאל.<br>`;
+                }
+                logMsg += `מעדכנים: high = mid - 1 (high = ${this.mid - 1})`;
+                this.high = this.mid - 1;
+            }
+
+            statusEl.innerHTML = logMsg;
+        }
+    }
+
+    const sim1 = new Simulation('ex1', true);
+    const sim2 = new Simulation('ex2', false);
+
+    function initSimulations() {
+        sim1.generateArrays();
+        sim2.generateArrays();
+        sim1.render();
+        sim2.render();
+        
+        document.getElementById('ex1-status').innerText = 'לחץ על Enter כדי להתחיל את הריצה.';
+        document.getElementById('ex2-status').innerText = 'לחץ על Enter כדי להתחיל את הריצה.';
+        document.getElementById('ex1-result').className = 'result-message';
+        document.getElementById('ex2-result').className = 'result-message';
+    }
+
+    function switchExample() {
+        const selected = document.getElementById('example-selector').value;
+        
+        document.getElementById('ex1').classList.remove('active');
+        document.getElementById('ex2').classList.remove('active');
+        
+        document.getElementById(selected).classList.add('active');
+    }
+
+    function stepCurrent() {
+        const selected = document.getElementById('example-selector').value;
+        if (selected === 'ex1') sim1.step();
+        else sim2.step();
+    }
+
+    function resetCurrent() {
+        const selected = document.getElementById('example-selector').value;
+        const currentSim = (selected === 'ex1') ? sim1 : sim2;
+        
+        currentSim.resetState();
+        currentSim.render();
+
+        document.getElementById(`${selected}-status`).innerText = 'האלגוריתם אותחל על המערכים הקיימים. לחץ על Enter.';
+        document.getElementById(`${selected}-result`).className = 'result-message';
+    }
+
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); 
+            stepCurrent();
+        }
+    });
+
+    window.onload = initSimulations;
+</script>
+
+</body>
+</html>
