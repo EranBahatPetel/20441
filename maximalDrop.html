@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>maximalDrop</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            max-width: 1050px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        /* מערכת תצוגה אחידה לגרפיקה, למערך ולחיצים */
+        .shared-grid {
+            display: flex;
+            justify-content: center;
+            direction: ltr; /* מבטיח זרימה משמאל לימין (אינדקס 0 בשמאל) */
+        }
+        .column-container {
+            width: 46px; /* רוחב אחיד ומדויק לכל טור */
+            margin: 0 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* אזור הגרפיקה עם קו ה-0 */
+        .graph-area {
+            height: 200px;
+            width: 100%;
+            position: relative;
+            background-color: #fafafa;
+            border-bottom: 2px solid #333; /* קו ה-0 */
+            margin-bottom: 185px; /* מפנה מקום למלבנים השליליים שגולשים למטה */
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        
+        /* הגדרות המלבנים הגרפיים */
+        .bar-wrapper {
+            position: relative;
+            width: 32px;
+            height: 0;
+        }
+        .bar {
+            width: 32px;
+            position: absolute;
+            box-sizing: border-box;
+            border: 1px solid #999;
+            background-color: #e0e0e0;
+        }
+        .bar.positive {
+            bottom: 0;
+        }
+        .bar.negative {
+            top: 2px;
+        }
+
+        /* פיצול אנכי למקרה שהאיבר הוא גם max וגם min */
+        .split-bar {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        .split-left {
+            width: 50%;
+            height: 100%;
+            background-color: #4caf50;
+        }
+        .split-right {
+            width: 50%;
+            height: 100%;
+            background-color: #f44336;
+        }
+
+        /* תצוגת האינדקס מעל כל תא */
+        .index-label {
+            font-size: 0.8rem;
+            color: #666;
+            font-weight: bold;
+            margin-bottom: 4px;
+            height: 16px;
+            line-height: 16px;
+        }
+
+        /* עיצוב תאי המערך */
+        .array-cell {
+            width: 44px;
+            height: 44px;
+            line-height: 44px;
+            border: 2px solid #ccc;
+            font-weight: bold;
+            background-color: #fff;
+            transition: background-color 0.2s;
+            font-size: 0.95rem;
+            direction: ltr;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .array-cell.current-i {
+            background-color: #fffde7;
+            border-color: #fbc02d;
+        }
+
+        /* עיצוב החיצים */
+        .arrow-box {
+            height: 70px;
+            margin-top: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .arrow {
+            margin: 1px 0;
+        }
+
+        /* פאנל המידע בשורה אחת */
+        .info-panel {
+            font-size: 1.2rem;
+            margin: 20px 0;
+            padding: 15px 25px;
+            background-color: #f1f8e9;
+            border-radius: 5px;
+            border: 1px solid #c5e1a5;
+            display: inline-block;
+            text-align: center;
+        }
+        .details-inline {
+            font-size: 1rem;
+            color: #444;
+            font-weight: normal;
+            margin-right: 6px;
+        }
+        .num-val {
+            direction: ltr;
+            display: inline-block;
+        }
+        .status-message {
+            margin-top: 15px;
+            font-size: 1.1rem;
+            color: #555;
+            min-height: 24px;
+        }
+        .result-highlight {
+            font-size: 1.5rem;
+            color: #2e7d32;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .btn-container {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 25px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+        .btn-reset {
+            background-color: #008cba;
+            color: white;
+        }
+        .btn-reset:hover {
+            background-color: #007399;
+        }
+        .btn-new {
+            background-color: #e7e7e7;
+            color: black;
+        }
+        .btn-new:hover {
+            background-color: #ddd;
+        }
+        .instructions {
+            color: #777;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>maximalDrop</h1>
+    <p class="instructions">לחץ על מקש <strong>Enter</strong> במקלדת כדי להתקדם צעד אחר צעד באלגוריתם.</p>
+    
+    <!-- המבנה המשולב -->
+    <div class="shared-grid" id="mainGridContainer"></div>
+    
+    <!-- פאנל המידע בשורה אחת עם סוגריים -->
+    <div>
+        <div class="info-panel">
+            <strong>maxFall: <span id="maxFallValue" class="num-val">0</span></strong>
+            <span id="detailsValue" class="details-inline"></span>
+        </div>
+    </div>
+    
+    <div class="status-message" id="statusMessage">מוכן להתחלה. לחץ Enter לביצוע הצעד הראשון עבור i = 1.</div>
+    <div id="resultContainer"></div>
+    
+    <!-- כפתורי שליטה -->
+    <div class="btn-container">
+        <button class="btn-reset" onclick="resetSimulation()">הרץ מהתחלה</button>
+        <button class="btn-new" onclick="loadWithNewArray()">הגרל מערך חדש</button>
+    </div>
+</div>
+
+<script>
+    let array = [];
+    
+    // משתני האלגוריתם
+    let i, max, min, maxFall;
+    let bestMaxIdx, bestMinIdx;
+    let isFinished = false;
+
+    const scale = 3.5;
+
+    // טעינה ראשונית
+    loadWithNewArray();
+
+    function generateNewArray() {
+        array = [];
+        for (let k = 0; k < 20; k++) {
+            const num = Math.floor(Math.random() * 101) - 50; 
+            array.push(num);
+        }
+    }
+
+    function initSimulation() {
+        i = 1;
+        max = 0;
+        min = 0;
+        maxFall = 0;
+        bestMaxIdx = 0;
+        bestMinIdx = 0;
+        isFinished = false;
+        
+        renderGrid();
+        updateInfoPanel();
+        document.getElementById('statusMessage').innerHTML = 'מוכן להתחלה. לחץ Enter לביצוע הצעד הראשון עבור i = 1.';
+        document.getElementById('resultContainer').innerHTML = "";
+    }
+
+    function loadWithNewArray() {
+        generateNewArray();
+        initSimulation();
+    }
+
+    // עדכון השורה של maxFall כולל הסוגריים עם המיקומים והערכים
+    function updateInfoPanel() {
+        document.getElementById('maxFallValue').innerText = maxFall;
+        document.getElementById('detailsValue').innerHTML = 
+            `(מקום <strong>${bestMaxIdx}</strong> עם ערך <span class="num-val">${array[bestMaxIdx]}</span>, מקום <strong>${bestMinIdx}</strong> עם ערך <span class="num-val">${array[bestMinIdx]}</span>)`;
+    }
+
+    function renderGrid() {
+        const gridContainer = document.getElementById('mainGridContainer');
+        gridContainer.innerHTML = '';
+
+        array.forEach((val, idx) => {
+            const colContainer = document.createElement('div');
+            colContainer.className = 'column-container';
+
+            // 1. גרפיקה
+            const graphArea = document.createElement('div');
+            graphArea.className = 'graph-area';
+
+            const barWrapper = document.createElement('div');
+            barWrapper.className = 'bar-wrapper';
+
+            const bar = document.createElement('div');
+            const absHeight = Math.abs(val) * scale;
+            bar.style.height = `${absHeight}px`;
+
+            if (val >= 0) {
+                bar.className = 'bar positive';
+            } else {
+                bar.className = 'bar negative';
+            }
+
+            let isMax = (idx === max);
+            let isMin = (idx === min);
+            let isI   = (idx === i && i < array.length);
+
+            if (isMax && isMin) {
+                const splitBar = document.createElement('div');
+                splitBar.className = 'split-bar';
+                splitBar.innerHTML = '<div class="split-left"></div><div class="split-right"></div>';
+                bar.appendChild(splitBar);
+            } else if (isMax) {
+                bar.style.backgroundColor = '#4caf50';
+            } else if (isMin) {
+                bar.style.backgroundColor = '#f44336';
+            } else if (isI) {
+                bar.style.backgroundColor = '#fbc02d';
+            }
+
+            barWrapper.appendChild(bar);
+            graphArea.appendChild(barWrapper);
+            colContainer.appendChild(graphArea);
+
+            // 2. אינדקס מעל תא המערך
+            const indexLabel = document.createElement('div');
+            indexLabel.className = 'index-label';
+            indexLabel.innerText = idx;
+            colContainer.appendChild(indexLabel);
+
+            // 3. תא המערך
+            const cell = document.createElement('div');
+            cell.className = 'array-cell';
+            if (isI) {
+                cell.className += ' current-i';
+            }
+            cell.innerText = val;
+            colContainer.appendChild(cell);
+
+            // 4. חיצים
+            const arrowBox = document.createElement('div');
+            arrowBox.className = 'arrow-box';
+
+            if (isMax) {
+                arrowBox.innerHTML += '<span class="arrow" style="color: #4caf50;">▲ max</span>';
+            }
+            if (isMin) {
+                arrowBox.innerHTML += '<span class="arrow" style="color: #f44336;">▼ min</span>';
+            }
+            if (isI) {
+                arrowBox.innerHTML += '<span class="arrow" style="color: #fbc02d;">⬆ i</span>';
+            }
+
+            colContainer.appendChild(arrowBox);
+            gridContainer.appendChild(colContainer);
+        });
+    }
+
+    function nextStep() {
+        if (isFinished) return;
+
+        if (i < array.length) {
+            let msg = `בודק אינדקס i = ${i} (הערך: <span class="num-val">${array[i]}</span>). `;
+            
+            if (array[i] > array[max]) {
+                max = i;
+                min = i;
+                msg += `נמצא מקסימום חדש! max ו-min עודכנו ל-${i}. `;
+            }
+            else if (array[i] < array[min]) {
+                min = i;
+                msg += `נמצא מינימום חדש! min עודכן ל-${i}. `;
+            }
+            
+            const currentDiff = array[max] - array[min];
+            if (currentDiff > maxFall) {
+                maxFall = currentDiff;
+                bestMaxIdx = max;
+                bestMinIdx = min;
+                msg += `נמצאה נפילה גדולה יותר! maxFall עודכן ל-<span class="num-val">${maxFall}</span>. `;
+            }
+            
+            updateInfoPanel();
+            document.getElementById('statusMessage').innerHTML = msg;
+            
+            i++;
+            renderGrid();
+        } 
+        
+        if (i >= array.length && !isFinished) {
+            isFinished = true;
+            document.getElementById('statusMessage').innerHTML = "האלגוריתם הגיע לסוף המערך.";
+            document.getElementById('resultContainer').innerHTML = `
+                <div class="result-highlight">הערך המוחזר (Return): <span class="num-val">${maxFall}</span></div>
+            `;
+            renderGrid();
+        }
+    }
+
+    function resetSimulation() {
+        initSimulation();
+    }
+
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); 
+            nextStep();
+        }
+    });
+</script>
+
+</body>
+</html>
