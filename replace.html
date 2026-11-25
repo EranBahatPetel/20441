@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>ויזואליזציה של אלגוריתם Replace</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .instructions {
+            background-color: #e3f2fd;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border-right: 5px solid #2196f3;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* סגנון כפתור האתחול */
+        .reset-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 0.9em;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .reset-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 30px;
+            background: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .stat-box {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-value {
+            color: #e74c3c;
+            font-family: monospace;
+            font-size: 1.3em;
+        }
+
+        .array-container {
+            display: flex;
+            flex-direction: column;
+            gap: 35px;
+            width: 95%;
+            max-width: 1100px;
+            background: white;
+            padding: 40px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .array-row {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            position: relative;
+        }
+
+        .array-label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .cells-wrapper {
+            display: flex;
+            direction: ltr; 
+            border: 2px solid #333;
+            border-radius: 4px;
+            background: #fff;
+            position: relative;
+        }
+
+        .cell {
+            flex: 1;
+            min-width: 45px;
+            height: 55px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-right: 1px solid #ccc;
+            position: relative;
+            font-family: monospace;
+            font-size: 1.1em;
+            background: #fff;
+            transition: background-color 0.3s;
+        }
+
+        .cell:last-child {
+            border-right: none;
+        }
+
+        .cell-index {
+            position: absolute;
+            top: 2px;
+            font-size: 0.75em;
+            color: #888;
+        }
+
+        .cell-value {
+            display: inline-block;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+        }
+
+        #pointer-arrow {
+            position: absolute;
+            top: -28px;
+            font-size: 24px;
+            color: #e74c3c;
+            transition: left 0.3s ease;
+            transform: translateX(-50%);
+            display: none;
+            z-index: 10;
+        }
+
+        .active-pointer {
+            background-color: #ffeaa7 !important;
+        }
+
+        /* אנימציות ריחוף */
+        .value-exit {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+
+        .value-enter {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        .value-active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>סימולטור אלגוריתם Replace</h1>
+    
+    <div class="instructions">
+        <span>לחצו על מקש <strong>Enter</strong> כדי להתקדם שלב אחר שלב באלגוריתם.</span>
+        <button class="reset-btn" onclick="resetSimulation()">אפס והרץ מחדש 🔄</button>
+    </div>
+
+    <div class="dashboard">
+        <div class="stat-box">מצב נוכחי: <span id="status-text" style="color:#2980b9;">לפני תחילת הריצה</span></div>
+        <div class="stat-box">maxOfNumbersToTheRight = <span id="max-val" class="stat-value">0</span></div>
+    </div>
+
+    <div class="array-container">
+        <div class="array-row">
+            <div class="array-label">המערך המקורי:</div>
+            <div class="cells-wrapper" id="original-array"></div>
+        </div>
+
+        <div class="array-row">
+            <div class="array-label">מערך עבודה (בזמן ריצה):</div>
+            <div id="pointer-arrow">👇</div>
+            <div class="cells-wrapper" id="working-array"></div>
+        </div>
+    </div>
+
+    <script>
+        const size = 20;
+        let originalData = [];
+        let workingData = [];
+        let originalPenultimateValue = 0;
+
+        const len = size - 1; 
+        let maxOfNumbersToTheRight = 0;
+        let currentStep = 0;
+        let loopI = 0;
+
+        const origContainer = document.getElementById('original-array');
+        const workContainer = document.getElementById('working-array');
+        const arrow = document.getElementById('pointer-arrow');
+        const maxValDisplay = document.getElementById('max-val');
+        const statusText = document.getElementById('status-text');
+
+        // פונקציה ראשונית - נקראת פעם אחת בלבד בעת טעינת הדף הראשונה כדי לקבוע את הערכים
+        function generateInitialData() {
+            originalData = [];
+            for (let i = 0; i < size; i++) {
+                originalData.push(Math.floor(Math.random() * 90) + 10);
+            }
+            originalPenultimateValue = originalData[size - 2];
+
+            // בנייה קבועה של המערך המקורי בתצוגה (הוא אף פעם לא משתנה)
+            origContainer.innerHTML = '';
+            for (let i = 0; i < size; i++) {
+                const origCell = document.createElement('div');
+                origCell.className = 'cell';
+                origCell.innerHTML = `<span class="cell-index">${i}</span><span>${originalData[i]}</span>`;
+                origContainer.appendChild(origCell);
+            }
+        }
+
+        // פונקציית אתחול - מחזירה את מערך העבודה למצבו המקורי ללא הגרלה מחדש
+        function resetSimulation() {
+            // 1. העתקה מחדש של אותם נתונים מקוריים
+            workingData = [...originalData];
+
+            // 2. איפוס משתני האלגוריתם
+            maxOfNumbersToTheRight = 0;
+            currentStep = 0;
+            loopI = len - 2; // 17
+
+            // 3. איפוס תצוגת לוח הבקרה והחץ
+            maxValDisplay.innerText = '0';
+            statusText.innerText = 'לפני תחילת הריצה (לחצו Enter)';
+            statusText.style.color = '#2980b9';
+            arrow.style.display = 'none';
+            clearHighlights();
+
+            // 4. בנייה מחדש רק של מערך העבודה הדינמי עם הערכים המקוריים
+            workContainer.innerHTML = '';
+            for (let i = 0; i < size; i++) {
+                const workCell = document.createElement('div');
+                workCell.className = 'cell';
+                workCell.id = `work-cell-${i}`;
+                workCell.innerHTML = `<span class="cell-index">${i}</span><span class="cell-value" id="val-${i}">${workingData[i]}</span>`;
+                workContainer.appendChild(workCell);
+            }
+        }
+
+        // עדכון מיקום החץ המצביע מעל התא הנוכחי
+        function updateArrowPosition(index) {
+            const cell = document.getElementById(`work-cell-${index}`);
+            if (cell) {
+                arrow.style.display = 'block';
+                const offsetLeft = cell.offsetLeft;
+                const cellWidth = cell.offsetWidth;
+                arrow.style.left = (offsetLeft + cellWidth / 2) + 'px';
+            }
+        }
+
+        // פונקציית אנימציה להחלפת ערכים (ריחוף למעלה ולמטה)
+        function animateCellUpdate(index, newValue) {
+            const valSpan = document.getElementById(`val-${index}`);
+            
+            valSpan.classList.add('value-exit');
+            setTimeout(() => {
+                valSpan.innerText = newValue;
+                valSpan.classList.remove('value-exit');
+                valSpan.classList.add('value-enter');
+                
+                valSpan.offsetHeight; // Force reflow
+                
+                valSpan.classList.remove('value-enter');
+                valSpan.classList.add('value-active');
+            }, 200);
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('active-pointer'));
+        }
+
+        function highlightCell(index) {
+            clearHighlights();
+            const cell = document.getElementById(`work-cell-${index}`);
+            if (cell) cell.classList.add('active-pointer');
+            updateArrowPosition(index);
+        }
+
+        // מנוע הצעדים בלחיצה על Enter
+        function nextStep() {
+            if (currentStep === 0) {
+                // שלב 0: שמירת המקסימום של שני התאים הימניים ביותר
+                maxOfNumbersToTheRight = Math.max(originalPenultimateValue, workingData[len]);
+                maxValDisplay.innerText = maxOfNumbersToTheRight;
+                statusText.innerText = `מחשב מקסימום ראשוני בין תא ${len-1} לתא הימני ביותר ${len}`;
+                highlightCell(len);
+                currentStep = 1;
+            } 
+            else if (currentStep === 1) {
+                // שלב 1: איפוס המקום הימני ביותר במערך (תא 19)
+                workingData[len] = 0;
+                animateCellUpdate(len, 0);
+                statusText.innerText = `עדכון ראשון: מאפס את התא הימני ביותר במערך (תא ${len})`;
+                highlightCell(len);
+                currentStep = 2;
+            } 
+            else if (currentStep === 2) {
+                // שלב 2: עדכון המקום השני מימין (תא 18) לקבלת הערך המקורי של התא האחרון
+                workingData[len - 1] = originalData[len];
+                animateCellUpdate(len - 1, workingData[len - 1]);
+                statusText.innerText = `עדכון שני: מעתיק את הערך המקורי של תא ${len} לתוך תא ${len-1}`;
+                highlightCell(len - 1);
+                currentStep = 3;
+            } 
+            else if (currentStep === 3) {
+                // שלב 3: הכנה לכניסה ללולאת ה-for
+                statusText.innerText = `מתחיל את לולאת ה-for הימנית-שמאלית החל מתא ${loopI}`;
+                highlightCell(loopI);
+                currentStep = 4;
+            } 
+            else if (currentStep === 4) {
+                // שלב 4: ריצת הלולאה מימין לשמאל
+                if (loopI >= 0) {
+                    let temp = workingData[loopI];
+                    
+                    // עדכון התא למקסימום הנוכחי שנמצא מימינו
+                    workingData[loopI] = maxOfNumbersToTheRight;
+                    animateCellUpdate(loopI, maxOfNumbersToTheRight);
+                    
+                    // עדכון המקסימום להמשך הדרך שמאלה
+                    maxOfNumbersToTheRight = Math.max(maxOfNumbersToTheRight, temp);
+                    maxValDisplay.innerText = maxOfNumbersToTheRight;
+                    
+                    statusText.innerText = `אינדקס [${loopI}]: מעדכן למקסימום מימין (${workingData[loopI]}), ומחשב את המקסימום הבא`;
+                    highlightCell(loopI);
+                    
+                    loopI--;
+                } else {
+                    clearHighlights();
+                    arrow.style.display = 'none';
+                    statusText.innerText = "הריצה הסתיימה בהצלחה! המערך עודכן במלואו.";
+                    statusText.style.color = "#27ae60";
+                }
+            }
+        }
+
+        // האזנה למקש Enter בלבד
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                nextStep();
+            }
+        });
+
+        // סדר הפעולות בטעינה הראשונית של הדף
+        generateInitialData(); // מגריל ערכים פעם אחת בלבד
+        resetSimulation();     // טוען אותם למערך הדינמי ומוכן לעבודה
+    </script>
+</body>
+</html>
