@@ -103,8 +103,8 @@
         <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <span>המערך הממוין</span>
-                    <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">אורך: 20 | עצירה מובטחת מאינדקס 10 ומעלה</span>
+                    <span>המערך הממוין ממש</span>
+                    <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">אורך: 20 | ללא כפילויות | עצירה מובטחת מאינדקס 10 ומעלה</span>
                 </h2>
                 <!-- מקרא צבעים -->
                 <div class="flex flex-wrap items-center gap-3 text-xs font-medium">
@@ -169,18 +169,18 @@
                     <!-- תיבת נוסחת ההשוואה -->
                     <div id="comparison-box" class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-around gap-4 text-center">
                         <div>
-                            <div class="text-xs text-slate-500 mb-1">האיבר הבא (<span class="font-mono">arr[i]</span>)</div>
-                            <div id="cmp-arr-val" class="text-2xl font-bold font-mono text-blue-700">—</div>
+                            <div class="text-xs text-slate-500 mb-1">האיבר הבא (<span class="font-mono" dir="ltr">arr[i]</span>)</div>
+                            <div id="cmp-arr-val" dir="ltr" class="text-2xl font-bold font-mono text-blue-700">—</div>
                         </div>
                         <div class="text-xl font-bold text-slate-400">−</div>
                         <div>
-                            <div class="text-xs text-slate-500 mb-1">הסכום עד הנה (<span class="font-mono">sum</span>)</div>
-                            <div id="cmp-sum-val" class="text-2xl font-bold font-mono text-emerald-700">—</div>
+                            <div class="text-xs text-slate-500 mb-1">הסכום עד הנה (<span class="font-mono" dir="ltr">sum</span>)</div>
+                            <div id="cmp-sum-val" dir="ltr" class="text-2xl font-bold font-mono text-emerald-700">—</div>
                         </div>
                         <div class="text-xl font-bold text-slate-400">=</div>
                         <div>
-                            <div class="text-xs text-slate-500 mb-1">ההפרש (<span class="font-mono">arr[i] - sum</span>)</div>
-                            <div id="cmp-diff-val" class="text-2xl font-bold font-mono text-slate-800">—</div>
+                            <div class="text-xs text-slate-500 mb-1">ההפרש (<span class="font-mono" dir="ltr">arr[i] - sum</span>)</div>
+                            <div id="cmp-diff-val" dir="ltr" class="text-2xl font-bold font-mono text-slate-800">—</div>
                         </div>
                         <div class="h-10 w-px bg-slate-200 hidden sm:block"></div>
                         <div>
@@ -210,46 +210,47 @@
 
     <script>
         /**
-         * מחולל מערך ממוין בן 20 מספרים שלמים חיוביים.
-         * מבטיח שהאלגוריתם לא יעצור לפני אינדקס 10 (לפחות אמצע המערך).
+         * מגריל מערך בן 20 מספרים שלמים חיוביים הממוין ממש (ללא כפילויות: arr[i] > arr[i-1]),
+         * שבו נקודת העצירה של האלגוריתם (arr[i] - sum > 1) מתרחשת באינדקס 10 ומעלה.
          */
         function generateValidArray() {
             const length = 20;
-            const arr = new Array(length);
-            
-            // האיבר הראשון חייב להיות 1 כדי לא לעצור באינדקס 0
-            arr[0] = 1;
-            let runningSum = 1;
+            // בחירת אינדקס עצירה אקראי בין 10 ל-19 (או 20 אם אין עצירה באמצע)
+            const stopIndex = Math.floor(Math.random() * 11) + 10;
 
-            // בוחרים אינדקס עצירה אקראי בין 10 ל-20 (20 אומר שאין עצירה מוקדמת כלל)
-            const stopIndex = Math.floor(Math.random() * 11) + 10; // 10..20
+            const arr = [1]; // האיבר הראשון חייב להיות 1 כדי שנוכל להמשיך מעבר לאינדקס 0
+            let sum = 1;
 
-            // מילוי האיברים מאינדקס 1 עד stopIndex - 1 כך שתמיד מתקיים arr[i] <= runningSum + 1
-            for (let i = 1; i < stopIndex; i++) {
-                const minVal = arr[i - 1];
-                const maxVal = runningSum + 1;
-                
-                // מגבילים מעט את הקפיצה המקסימלית כדי שהמספרים יישארו קריאים ונוחים למעקב ויזואלי,
-                // אך עדיין מאפשרים קפיצות מגוונות עד maxVal
-                const maxStep = Math.min(maxVal - minVal, Math.max(3, Math.floor(runningSum * 0.45)));
-                const nextVal = minVal + Math.floor(Math.random() * (maxStep + 1));
-                
-                arr[i] = nextVal;
-                runningSum += nextVal;
-            }
-
-            // אם נבחר אינדקס עצירה בתוך המערך (10..19), יוצרים בו פער: arr[stopIndex] > runningSum + 1
-            if (stopIndex < length) {
-                const gap = Math.floor(Math.random() * 6) + 2; // הפרש של 2 עד 7 מעל sum
-                arr[stopIndex] = runningSum + gap;
-
-                // השלמת שאר המערך בסדר לא יורד
-                for (let i = stopIndex + 1; i < length; i++) {
-                    arr[i] = arr[i - 1] + Math.floor(Math.random() * 8);
+            for (let i = 1; i < length; i++) {
+                const prev = arr[i - 1];
+                if (i < stopIndex) {
+                    // כדי שלא תהיה עצירה לפני stopIndex, נדרש: arr[i] <= sum + 1
+                    // כדי שהמערך יהיה ממוין ממש (ללא כפילויות), נדרש: arr[i] >= prev + 1
+                    const minVal = prev + 1;
+                    const maxVal = sum + 1;
+                    const nextVal = Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
+                    arr.push(nextVal);
+                    sum += nextVal;
+                } else if (i === stopIndex) {
+                    // יצירת פער בנקודת העצירה: arr[i] > sum + 1 (וגם גדול ממש מ-prev)
+                    const minGapVal = Math.max(sum + 2, prev + 1);
+                    const gapOffset = Math.floor(Math.random() * 8);
+                    arr.push(minGapVal + gapOffset);
+                } else {
+                    // המשך המערך לאחר העצירה: שומרים על מיון ממש (עולה ממש)
+                    const step = Math.floor(Math.random() * 6) + 1;
+                    arr.push(prev + step);
                 }
             }
-
             return arr;
+        }
+
+        /**
+         * פונקציית עזר לעטיפת ביטויים מתמטיים ומספרים (כולל שליליים) בכיוון LTR מפורש,
+         * כדי שסימן המינוס יופיע תמיד משמאל למספר בתוך טקסט עברי.
+         */
+        function ltr(expr) {
+            return `<bdi dir="ltr" class="font-mono inline-block">${expr}</bdi>`;
         }
 
         /**
@@ -271,7 +272,7 @@
                 result: null,
                 badgeText: 'בדיקת תנאי פתיחה',
                 badgeClass: 'bg-slate-200 text-slate-800',
-                explanation: `מתחילים את הריצה: בודקים האם המערך ריק (arr.length == 0) או שהאיבר הראשון גדול מ-1 (arr[0] = ${arr[0]} > 1). מכיוון ש-arr[0] שווה ל-1, התנאי אינו מתקיים וממשיכים.`
+                explanation: `מתחילים את הריצה: בודקים האם המערך ריק (${ltr('arr.length == 0')}) או שהאיבר הראשון גדול מ-1 (${ltr(`arr[0] = ${arr[0]} > 1`)}). מכיוון ש-${ltr('arr[0]')} שווה ל-${ltr(1)}, התנאי אינו מתקיים וממשיכים.`
             });
 
             // שלב 1: אתחול הלולאה (i = 1, sum = arr[0])
@@ -287,7 +288,7 @@
                 result: null,
                 badgeText: 'אתחול הלולאה',
                 badgeClass: 'bg-blue-100 text-blue-800',
-                explanation: `מאתחלים את sum לערך האיבר הראשון: sum = arr[0] = ${sum}, ומציבים i = 1. כעת אנו יודעים להרכיב בוודאות את כל המספרים בטווח [1 .. ${sum}]. נבדוק כעת את האיבר הבא arr[1] = ${arr[1]}.`
+                explanation: `מאתחלים את ${ltr('sum')} לערך האיבר הראשון: ${ltr(`sum = arr[0] = ${sum}`)}, ומציבים ${ltr('i = 1')}. כעת אנו יודעים להרכיב בוודאות את כל המספרים בטווח ${ltr(`[1 .. ${sum}]`)}. נבדוק כעת את האיבר הבא ${ltr(`arr[1] = ${arr[1]}`)}.`
             });
 
             // מעבר על הלולאה
@@ -309,8 +310,8 @@
                     badgeText: isGap ? 'התנאי מתקיים! (פער > 1)' : 'התנאי לא מתקיים (הפרש ≤ 1)',
                     badgeClass: isGap ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800',
                     explanation: isGap
-                        ? `בודקים עבור i = ${i}: האם arr[${i}] - sum > 1? מתקבל ${currentVal} - ${sum} = ${diff} (גדול מ-1!). נוצר "חור": לא ניתן להרכיב את המספר ${sum + 1} מהאיברים הקודמים (שסכומם ${sum}), וכל האיברים מכאן והלאה גדולים או שווים ל-${currentVal}.`
-                        : `בודקים עבור i = ${i}: האם arr[${i}] - sum > 1? מתקבל ${currentVal} - ${sum} = ${diff} (קטן או שווה ל-1). לכן אין פער, וניתן לצרף את arr[${i}] = ${currentVal} לסכום.`
+                        ? `בודקים עבור ${ltr(`i = ${i}`)}: האם ${ltr(`arr[${i}] - sum > 1`)}? מתקבל ${ltr(`${currentVal} - ${sum} = ${diff}`)} (גדול מ-${ltr(1)}!). נוצר "חור": לא ניתן להרכיב את המספר ${ltr(sum + 1)} מהאיברים הקודמים (שסכומם ${ltr(sum)}), וכל האיברים מכאן והלאה גדולים או שווים ל-${ltr(currentVal)}.`
+                        : `בודקים עבור ${ltr(`i = ${i}`)}: האם ${ltr(`arr[${i}] - sum > 1`)}? מתקבל ${ltr(`${currentVal} - ${sum} = ${diff}`)} (קטן או שווה ל-${ltr(1)}). לכן אין פער, וניתן לצרף את ${ltr(`arr[${i}] = ${currentVal}`)} לסכום.`
                 });
 
                 if (isGap) {
@@ -326,7 +327,7 @@
                         result: sum + 1,
                         badgeText: 'עצירה והחזרת תשובה',
                         badgeClass: 'bg-rose-600 text-white',
-                        explanation: `האלגוריתם עוצר ומחזיר sum + 1 = ${sum} + 1 = ${sum + 1}. זהו המספר החיובי הקטן ביותר שלא ניתן להרכיב מסכום תת-קבוצה במערך.`
+                        explanation: `האלגוריתם עוצר ומחזיר ${ltr(`sum + 1 = ${sum} + 1 = ${sum + 1}`)}. זהו המספר החיובי הקטן ביותר שלא ניתן להרכיב מסכום תת-קבוצה במערך.`
                     });
                     return steps;
                 }
@@ -336,8 +337,8 @@
                 sum += currentVal;
                 const nextIdx = i + 1;
                 const nextInfo = nextIdx < arr.length
-                    ? `נקדם את i ל-${nextIdx} ונשווה מול arr[${nextIdx}] = ${arr[nextIdx]}.`
-                    : `סיימנו לסרוק את כל 20 איברי המערך (i הגיע ל-20).`;
+                    ? `נקדם את ${ltr('i')} ל-${ltr(nextIdx)} ונשווה מול ${ltr(`arr[${nextIdx}] = ${arr[nextIdx]}`)}.`
+                    : `סיימנו לסרוק את כל 20 איברי המערך (${ltr('i')} הגיע ל-${ltr(20)}).`;
 
                 steps.push({
                     phase: 'update-sum',
@@ -350,7 +351,7 @@
                     result: null,
                     badgeText: 'הרחבת טווח הסכומים',
                     badgeClass: 'bg-emerald-100 text-emerald-800',
-                    explanation: `מעדכנים: sum = ${prevSum} + ${currentVal} = ${sum}. כעת ניתן להרכיב כל מספר שלם בטווח החדש [1 .. ${sum}]. ${nextInfo}`
+                    explanation: `מעדכנים: ${ltr(`sum = ${prevSum} + ${currentVal} = ${sum}`)}. כעת ניתן להרכיב כל מספר שלם בטווח החדש ${ltr(`[1 .. ${sum}]`)}. ${nextInfo}`
                 });
             }
 
@@ -366,7 +367,7 @@
                 result: sum + 1,
                 badgeText: 'סיום המערך והחזרת תשובה',
                 badgeClass: 'bg-emerald-600 text-white',
-                explanation: `הלולאה הסתיימה בהצלחה עבור כל איברי המערך! ניתן להרכיב כל מספר בטווח [1 .. ${sum}], ולכן האלגוריתם מחזיר sum + 1 = ${sum + 1}.`
+                explanation: `הלולאה הסתיימה בהצלחה עבור כל איברי המערך! ניתן להרכיב כל מספר בטווח ${ltr(`[1 .. ${sum}]`)}, ולכן האלגוריתם מחזיר ${ltr(`sum + 1 = ${sum + 1}`)}.`
             });
 
             return steps;
@@ -485,8 +486,8 @@
                 statCurrent.textContent = '—';
                 statIndex.textContent = step.finished ? 'הסריקה הסתיימה' : 'ממתין לאתחול';
             }
-
-            // עדכון כרטיס תוצאה
+            // עדכון ההסבר המילולי (באמצעות innerHTML כדי לשמור על בידוד LTR של מספרים וביטויים)
+            stepExplanation.innerHTML = step.explanation;
             if (step.finished) {
                 statResult.textContent = step.result;
                 statResult.className = 'text-3xl font-extrabold text-rose-700 font-mono mt-1';
@@ -525,8 +526,7 @@
                 cmpRule.textContent = 'arr[i] - sum > 1';
             }
 
-            // עדכון ההסבר המילולי
-            stepExplanation.textContent = step.explanation;
+            // עיצוב תיבת ההסבר המילולי בהתאם לשלב הנוכחי
             if (step.finished) {
                 stepExplanation.className = 'bg-rose-50 border-r-4 border-rose-500 p-4 rounded-l-xl text-slate-900 font-medium text-sm sm:text-base leading-relaxed';
             } else if (step.phase === 'update-sum') {
