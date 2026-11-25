@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>אלגוריתם חיפוש בינארי כפול</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        /* אזור המערך */
+        .array-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            margin: 60px 0; 
+            padding: 10px 0;
+            direction: ltr;
+            flex-wrap: nowrap;
+            width: 100%;
+        }
+        
+        .array-item-wrapper {
+            flex: 1;
+            max-width: 32px; 
+            min-width: 18px;
+            margin: 0 2px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .array-box {
+            width: 100%;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e0e0e0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .index-label {
+            font-size: 10px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* מצביעים */
+        .pointer {
+            position: absolute;
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+            z-index: 10;
+            animation: bounce 0.5s infinite alternate;
+        }
+        
+        .pointer.low {
+            top: -35px;
+            color: #d9534f;
+        }
+        .pointer.high {
+            top: -35px;
+            color: #0275d8;
+        }
+        
+        .pointer.mid {
+            bottom: -35px;
+            color: #2b7a2b;
+        }
+        
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-3px); }
+        }
+        
+        /* צבעי תאים */
+        .in-range {
+            background-color: #5cb85c !important; 
+            color: white;
+        }
+        .found-first {
+            background-color: #f0ad4e !important; 
+            color: white;
+            border: 2px solid #d9534f;
+            transform: scale(1.15);
+            z-index: 5;
+        }
+        .found-last {
+            background-color: #0275d8 !important; 
+            color: white;
+            border: 2px solid #014c8c;
+            transform: scale(1.15);
+            z-index: 5;
+        }
+        
+        /* ממשק משתמש */
+        .controls {
+            margin: 20px 0;
+        }
+        input[type="number"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 160px;
+            text-align: center;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            outline: none;
+        }
+        input[type="number"]:focus {
+            border-color: #5cb85c;
+        }
+        .status-box {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #eee;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>אלגוריתם חיפוש ומניית מופעים במערך ממוין</h1>
+    
+    <div class="array-container" id="arrayContainer"></div>
+
+    <div class="controls">
+        <label for="searchInput">הכנס ערך לחיפוש (1-100): </label>
+        <input type="number" id="searchInput" min="1" max="100" placeholder="הקש מספר ו-Enter" autofocus>
+    </div>
+
+    <div class="status-box" id="statusMessage">הכנס מספר ולחץ Enter כדי להתחיל בחיפוש.</div>
+</div>
+
+<script>
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // ייצור מערך ממוין של 30 איברים עם חזרתיות
+    function generateRequiredArray() {
+        let pool = [];
+        let specialValues = [];
+        while (specialValues.length < 3) {
+            let val = getRandomInt(10, 90);
+            if (!specialValues.includes(val)) {
+                specialValues.push(val);
+            }
+        }
+        
+        const valRepeat5 = specialValues[0];
+        const valRepeat4_A = specialValues[1];
+        const valRepeat4_B = specialValues[2];
+
+        for (let i = 0; i < 5; i++) pool.push(valRepeat5);
+        for (let i = 0; i < 4; i++) pool.push(valRepeat4_A);
+        for (let i = 0; i < 4; i++) pool.push(valRepeat4_B);
+
+        while (pool.length < 30) {
+            let randomVal = getRandomInt(1, 100);
+            pool.push(randomVal);
+        }
+
+        pool.sort((a, b) => a - b);
+        return pool;
+    }
+
+    const arr = generateRequiredArray();
+
+    // משתני מצב
+    let currentPhase = 'IDLE'; 
+    let target = null;
+    let low = 0;
+    let high = arr.length - 1;
+    let mid = -1;
+    let firstFoundIndex = -1;
+    let lastFoundIndex = -1;
+
+    // רינדור המערך למסך
+    const container = document.getElementById('arrayContainer');
+    arr.forEach((val, idx) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'array-item-wrapper';
+        wrapper.id = `wrapper-${idx}`;
+
+        const box = document.createElement('div');
+        box.className = 'array-box';
+        box.id = `box-${idx}`;
+        box.innerText = val;
+
+        const label = document.createElement('div');
+        label.className = 'index-label';
+        label.innerText = idx;
+
+        wrapper.appendChild(box);
+        wrapper.appendChild(label);
+        container.appendChild(wrapper);
+    });
+
+    // האזנה למקש Enter
+    document.getElementById('searchInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            handleEnter();
+        }
+    });
+
+    function handleEnter() {
+        const inputVal = parseInt(document.getElementById('searchInput').value);
+        
+        if (isNaN(inputVal)) {
+            alert("אנא הכנס מספר תקין");
+            return;
+        }
+
+        // אתחול החיפוש
+        if (currentPhase === 'IDLE') {
+            target = inputVal;
+            resetVisuals();
+            currentPhase = 'FIRST_SEARCH';
+            low = 0;
+            high = arr.length - 1;
+            mid = Math.floor((low + high) / 2);
+            
+            document.getElementById('statusMessage').innerHTML = `מתחיל חיפוש בינארי ראשון עבור הערך ${target}.<br>לחץ Enter כדי לבצע את הבדיקה הראשונה ב-Mid.`;
+            updatePointers();
+            highlightRange();
+            return;
+        }
+
+        // שלבי החיפוש הראשון (למציאת המופע השמאלי ביותר)
+        if (currentPhase === 'FIRST_SEARCH') {
+            if (low <= high) {
+                if (arr[mid] === target) {
+                    firstFoundIndex = mid;
+                    high = mid - 1; 
+                    document.getElementById('statusMessage').innerHTML = `נמצא מופע זמני באינדקס ${mid}.<br>ממשיכים לחתוך שמאלה לחיפוש המופע הראשון המוחלט. לחץ Enter.`;
+                } else if (arr[mid] < target) {
+                    low = mid + 1;
+                    document.getElementById('statusMessage').innerHTML = `הערך ב-Mid (${arr[mid]}) קטן מ-${target}.<br>עוברים לחצי הימני (הגדלת Low). לחץ Enter.`;
+                } else {
+                    high = mid - 1;
+                    document.getElementById('statusMessage').innerHTML = `הערך ב-Mid (${arr[mid]}) גדול מ-${target}.<br>עוברים לחצי השמאלי (הקטנת High). לחץ Enter.`;
+                }
+                
+                if (low <= high) {
+                    mid = Math.floor((low + high) / 2);
+                } else {
+                    mid = -1;
+                }
+                
+                updatePointers();
+                highlightRange();
+            } else {
+                if (firstFoundIndex === -1) {
+                    document.getElementById('statusMessage').innerText = `הערך ${target} לא נמצא במערך כלל.`;
+                    currentPhase = 'IDLE';
+                    removePointers();
+                } else {
+                    document.getElementById(`box-${firstFoundIndex}`).className = 'array-box found-first';
+                    
+                    currentPhase = 'LAST_SEARCH';
+                    low = firstFoundIndex; 
+                    high = arr.length - 1;
+                    mid = Math.floor((low + high) / 2);
+                    
+                    document.getElementById('statusMessage').innerHTML = `המופע הראשון נקבע באינדקס ${firstFoundIndex}!<br>כעת מתחיל חיפוש בינארי שני למופע האחרון. לחץ Enter.`;
+                    updatePointers();
+                    highlightRange();
+                }
+            }
+            return;
+        }
+
+        // שלבי החיפוש השני (למציאת המופע הימני ביותר)
+        if (currentPhase === 'LAST_SEARCH') {
+            if (low <= high) {
+                if (arr[mid] === target) {
+                    lastFoundIndex = mid;
+                    low = mid + 1; 
+                    document.getElementById('statusMessage').innerHTML = `נמצא מופע זמני באינדקס ${mid}.<br>ממשיכים לחתוך ימינה לחיפוש המופע האחרון המוחלט. לחץ Enter.`;
+                } else if (arr[mid] < target) {
+                    low = mid + 1;
+                    document.getElementById('statusMessage').innerHTML = `הערך ב-Mid (${arr[mid]}) קטן מ-${target}.<br>עוברים לחצי הימני. לחץ Enter.`;
+                } else {
+                    high = mid - 1;
+                    document.getElementById('statusMessage').innerHTML = `הערך ב-Mid (${arr[mid]}) גדול מ-${target}.<br>עוברים לחצי השמאלי. לחץ Enter.`;
+                }
+                
+                if (low <= high) {
+                    mid = Math.floor((low + high) / 2);
+                } else {
+                    mid = -1;
+                }
+                
+                updatePointers();
+                highlightRange();
+            } else {
+                if (lastFoundIndex === -1) lastFoundIndex = firstFoundIndex;
+                
+                document.getElementById(`box-${lastFoundIndex}`).className = 'array-box found-last';
+                const count = lastFoundIndex - firstFoundIndex + 1;
+                
+                document.getElementById('statusMessage').innerHTML = `
+                    <span style="color: green; font-size: 20px;">החיפוש הסתיים!</span><br>
+                    אינדקס ראשון: ${firstFoundIndex} | אינדקס אחרון: ${lastFoundIndex}.<br>
+                    מספר המופעים הכולל במערך: <strong style="color: #0275d8; font-size: 22px;">${count}</strong>.
+                `;
+                
+                removePointers();
+                currentPhase = 'IDLE'; 
+            }
+        }
+    }
+
+    function highlightRange() {
+        for (let i = 0; i < arr.length; i++) {
+            const box = document.getElementById(`box-${i}`);
+            if (i === firstFoundIndex && currentPhase === 'LAST_SEARCH') {
+                box.className = 'array-box found-first';
+                continue;
+            }
+            if (i >= low && i <= high) {
+                box.className = 'array-box in-range';
+            } else {
+                box.className = 'array-box';
+            }
+        }
+    }
+
+    function updatePointers() {
+        removePointers();
+
+        if (low >= 0 && low < arr.length) {
+            const lowWrapper = document.getElementById(`wrapper-${low}`);
+            const lowPtr = document.createElement('div');
+            lowPtr.className = 'pointer low';
+            lowPtr.innerText = 'L▼';
+            lowWrapper.appendChild(lowPtr);
+        }
+
+        if (high >= 0 && high < arr.length) {
+            const highWrapper = document.getElementById(`wrapper-${high}`);
+            const highPtr = document.createElement('div');
+            highPtr.className = 'pointer high';
+            highPtr.innerText = 'H▼';
+            highWrapper.appendChild(highPtr);
+        }
+
+        if (mid >= 0 && mid < arr.length) {
+            const midWrapper = document.getElementById(`wrapper-${mid}`);
+            const midPtr = document.createElement('div');
+            midPtr.className = 'pointer mid';
+            midPtr.innerText = 'M▲';
+            midWrapper.appendChild(midPtr);
+        }
+    }
+
+    function removePointers() {
+        const pointers = document.querySelectorAll('.pointer');
+        pointers.forEach(p => p.remove());
+    }
+
+    function resetVisuals() {
+        firstFoundIndex = -1;
+        lastFoundIndex = -1;
+        mid = -1;
+        for (let i = 0; i < arr.length; i++) {
+            document.getElementById(`box-${i}`).className = 'array-box';
+        }
+        removePointers();
+    }
+</script>
+
+</body>
+</html>
