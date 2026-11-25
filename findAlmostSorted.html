@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>almostSorted</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        
+        /* סידור מבנה הדף - הצגת המערך לצד מונה האיטרציות */
+        .main-layout-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+        .iteration-sidebar-cell {
+            vertical-align: top;
+            width: 160px;
+            padding-left: 20px;
+        }
+        .array-content-cell {
+            vertical-align: top;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border-radius: 6px;
+            background: #fafafa;
+            border: 1px solid #eef2f3;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #34495e;
+            direction: rtl;
+        }
+        
+        /* מונה איטרציות מעוצב בצד שמאל */
+        .iteration-counter-card {
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .iteration-number {
+            font-size: 42px;
+            font-weight: bold;
+            color: #2ecc71;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+        
+        /* תצוגת המערך משמאל לימין */
+        .array-container {
+            display: block;
+            overflow-x: auto;
+        }
+        .array-row-wrapper {
+            margin-bottom: 12px;
+            direction: ltr;
+            display: flex;
+            justify-content: flex-start;
+        }
+        .array-table {
+            border-collapse: collapse;
+            direction: ltr;
+        }
+        .array-table th, .array-table td {
+            border: 1px solid #bdc3c7;
+            width: 46px;
+            height: 46px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 13px;
+        }
+        .array-table th {
+            background-color: #eaeded;
+            font-size: 10px;
+            color: #7f8c8d;
+            height: 20px;
+        }
+        
+        /* כפיית הצגת סימן המינוס משמאל למספר בכל מצב (במערך, בקלט ובכל מקום מוגדר) */
+        .cell-value, input[type="number"], .num-ltr {
+            direction: ltr !important;
+            unicode-bidi: bidi-override !important;
+            display: inline-block;
+        }
+
+        /* צבעי פויינטרים ומצבים */
+        .cell-low { background-color: #d1ecf1 !important; border: 2px solid #17a2b8 !important; font-weight: bold; }
+        .cell-high { background-color: #f8d7da !important; border: 2px solid #dc3545 !important; font-weight: bold; }
+        .cell-mid { background-color: #fff3cd !important; border: 2px solid #ffc107 !important; font-weight: bold; }
+        .cell-neighbor { background-color: #e2e3e5 !important; border: 1px dashed #6c757d !important; }
+        .cell-match { background-color: #d4edda !important; border: 2px solid #28a745 !important; font-weight: bold; animation: pulse 0.5s infinite alternate; }
+        
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+
+        .legend { text-align: center; margin-top: 15px; direction: rtl; }
+        .legend-item { display: inline-block; margin: 0 10px; font-size: 13px; }
+        .legend-box { display: inline-block; width: 15px; height: 15px; margin-left: 5px; vertical-align: middle; border: 1px solid #ccc; }
+        .controls { text-align: center; margin-top: 20px; direction: rtl; }
+        input[type="number"] { padding: 10px; width: 140px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+        button { padding: 10px 20px; font-size: 16px; margin: 0 5px; cursor: pointer; border: none; border-radius: 4px; background-color: #3498db; color: white; transition: background 0.2s; }
+        button:hover { background-color: #2980b9; }
+        button.btn-reset { background-color: #e67e22; }
+        button.btn-reset:hover { background-color: #d35400; }
+        .status-box { font-size: 16px; padding: 15px; background: #edf2f7; border-right: 5px solid #4a5568; margin-top: 15px; min-height: 50px; line-height: 1.6; direction: rtl; }
+        .log-box { max-height: 200px; overflow-y: auto; background: #2d3748; color: #fff; font-family: monospace; padding: 15px; border-radius: 4px; margin-top: 10px; font-size: 13px; line-height: 1.5; direction: rtl; text-align: right; }
+        .log-entry { margin-bottom: 5px; }
+        .log-success { color: #48bb78; font-weight: bold; }
+        .log-fail { color: #f56565; font-weight: bold; }
+        .instruction { text-align: center; font-weight: bold; color: #e74c3c; margin-top: 15px; font-size: 16px; direction: rtl; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>almostSorted</h1>
+    
+    <table class="main-layout-table">
+        <tr>
+            <td class="iteration-sidebar-cell">
+                <div class="iteration-counter-card">
+                    <div style="font-size: 13px; font-weight: bold;">מספר איטרציות<br>(שינויי mid)</div>
+                    <div class="iteration-number" id="iterationCounter">0</div>
+                </div>
+            </td>
+            
+            <td class="array-content-cell">
+                <div class="section">
+                    <div class="section-title">המערך הנוכחי (100 איברים, מוצג משמאל לימין, 20 בשורה):</div>
+                    <div class="array-container" id="arrayContainer"></div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="legend" style="margin-top: -10px; margin-bottom: 25px;">
+        <div class="legend-item"><span class="legend-box cell-low"></span> Low</div>
+        <div class="legend-item"><span class="legend-box cell-high"></span> High</div>
+        <div class="legend-item"><span class="legend-box cell-mid"></span> Mid</div>
+        <div class="legend-item"><span class="legend-box cell-neighbor"></span> שכני Mid שנבדקים</div>
+        <div class="legend-item"><span class="legend-box cell-match"></span> הערך נמצא!</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">לוח בקרה וקלט:</div>
+        <div class="controls">
+            <label for="targetInput">הכנס מספר לחיפוש: </label>
+            <input type="number" id="targetInput" placeholder="-15">
+            <button class="btn-reset" onclick="resetSearch()">התחל מחדש מההתחלה</button>
+            <button onclick="generateNewArray()">הגרל מערך חדש</button>
+        </div>
+        <div class="instruction" id="instructionText">הקלד מספר בתיבה ולחץ על מקש Enter כדי להתחיל בחיפוש</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">מצב האלגוריתם הנוכחי:</div>
+        <div class="status-box" id="statusBox">
+            הסימולטור מוכן. אנא הזן ערך מבוקש בתיבה למעלה ולחץ על מקש <strong>Enter</strong> במקלדת.
+        </div>
+        <div class="section-title" style="margin-top:20px;">היסטוריית ריצה (Log):</div>
+        <div class="log-box" id="logBox">
+            <div class="log-entry">מערך בן 100 איברים הוגרל בהצלחה. מחכה לקלט...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let originalSortedArray = [];
+    let currentArray = [];
+    const TOTAL_SIZE = 100;
+    const ITEMS_PER_ROW = 20;
+    let low = 0, high = TOTAL_SIZE - 1, mid = -1, target = null;
+    let searchStarted = false, searchEnded = false;
+    let iterationCount = 0, subStep = 0; 
+
+    // פונקציית עזר המבטיחה שכל מספר (במיוחד שלילי) שמוצג בתוך טקסט בעברית ישמור על מינוס משמאל
+    function formatNum(val) {
+        return `<span class="num-ltr">${val}</span>`;
+    }
+
+    function getRandomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+    function generateNewArray() {
+        originalSortedArray = [];
+        let currentVal = getRandomInt(-250, -200); 
+        for (let i = 0; i < TOTAL_SIZE; i++) {
+            currentVal += getRandomInt(3, 8); 
+            originalSortedArray.push(currentVal);
+        }
+        currentArray = [...originalSortedArray];
+        for (let i = 0; i < TOTAL_SIZE - 1; i++) {
+            if (Math.random() < 0.35) {
+                let temp = currentArray[i];
+                currentArray[i] = currentArray[i+1];
+                currentArray[i+1] = temp;
+                i++; 
+            }
+        }
+        fullResetState(); renderArray(); updateIterationDisplay();
+        document.getElementById('logBox').innerHTML = '<div class="log-entry">מערך בן 100 איברים הוגרל בהצלחה. מחכה לקלט...</div>';
+        document.getElementById('statusBox').innerHTML = 'הסימולטור מוכן. אנא הזן ערך מבוקש ולחץ על Enter.';
+        document.getElementById('targetInput').disabled = false; document.getElementById('targetInput').focus();
+        document.getElementById('instructionText').innerHTML = 'הקלד מספר בתיבה ולחץ על מקש <strong>Enter</strong> כדי להתחיל בחיפוש';
+    }
+
+    function fullResetState() {
+        low = 0; high = TOTAL_SIZE - 1; mid = -1; target = null;
+        searchStarted = false; searchEnded = false; subStep = 0; iterationCount = 0;
+    }
+
+    function resetSearch() {
+        fullResetState(); renderArray(); updateIterationDisplay();
+        document.getElementById('targetInput').disabled = false; document.getElementById('targetInput').focus();
+        document.getElementById('instructionText').innerHTML = 'הקלד מספר בתיבה ולחץ על מקש <strong>Enter</strong> כדי להתחיל בחיפוש';
+        document.getElementById('statusBox').innerHTML = 'החיפוש אותחל על המערך הקיים. הזן מספר ולחץ Enter במקלדת.';
+        log("החיפוש אותחל מחדש על אותו המערך.");
+    }
+
+    function updateIterationDisplay() { document.getElementById('iterationCounter').innerText = iterationCount; }
+
+    function renderArray() {
+        let html = '';
+        for (let r = 0; r < TOTAL_SIZE / ITEMS_PER_ROW; r++) {
+            let startIdx = r * ITEMS_PER_ROW;
+            let endIdx = startIdx + ITEMS_PER_ROW;
+            html += '<div class="array-row-wrapper"><table class="array-table"><thead><tr>';
+            for (let i = startIdx; i < endIdx; i++) html += `<th>${i}</th>`;
+            html += '</tr></thead><tbody><tr>';
+            for (let i = startIdx; i < endIdx; i++) {
+                let cellClass = '';
+                if (searchStarted) {
+                    if (searchEnded && currentArray[i] === target && (i === mid || i === mid - 1 || i === mid + 1)) {
+                        if ((subStep === 1 && i === mid) || (subStep === 2 && i === mid - 1) || (subStep === 3 && i === mid + 1) || searchEnded) cellClass = 'cell-match';
+                    } 
+                    if (cellClass === '') {
+                        if (mid !== -1) {
+                            if (subStep === 1 && i === mid) cellClass = 'cell-mid';
+                            else if (subStep === 2 && i === mid - 1 && mid > low) cellClass = 'cell-neighbor';
+                            else if (subStep === 3 && i === mid + 1 && mid < high) cellClass = 'cell-neighbor';
+                            else if (i === mid) cellClass = 'cell-mid';
+                        }
+                        if (i === low && cellClass === '') cellClass = 'cell-low';
+                        else if (i === high && cellClass === '') cellClass = 'cell-high';
+                    }
+                }
+                html += `<td class="${cellClass}" id="cell-${i}"><span class="cell-value">${currentArray[i]}</span></td>`;
+            }
+            html += '</tr></tbody></table></div>';
+        }
+        document.getElementById('arrayContainer').innerHTML = html;
+    }
+
+    function log(message, type = '') {
+        const logBox = document.getElementById('logBox');
+        let className = '';
+        if (type === 'success') className = 'log-success';
+        if (type === 'fail') className = 'log-fail';
+        logBox.innerHTML += `<div class="log-entry ${className}">> ${message}</div>`;
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') { event.preventDefault(); handleStep(); }
+    });
+
+    function handleStep() {
+        if (searchEnded) return;
+        const inputEl = document.getElementById('targetInput');
+
+        if (!searchStarted) {
+            const val = parseInt(inputEl.value);
+            if (isNaN(val)) { alert("אנא הזן מספר שלם תקין בתיבת הקלט."); return; }
+            target = val; searchStarted = true; inputEl.disabled = true;
+            document.getElementById('instructionText').innerHTML = 'לחץ על מקש <strong>Enter</strong> כדי להמשיך לצעד הבא באלגוריתם';
+            log(`התחלת חיפוש עבור המספר המבוקש: <b>${formatNum(target)}</b> בטווח האינדקסים [${low} עד ${high}]`);
+        }
+
+        if (low > high) {
+            document.getElementById('statusBox').innerHTML = `<strong>החיפוש הסתיים:</strong> המספר <strong>${formatNum(target)}</strong> אינו נמצא במערך!`;
+            log(`החיפוש נכשל: הטווח התרוקן (low=${low} > high=${high}).`, "fail");
+            searchEnded = true; renderArray(); return;
+        }
+
+        if (subStep === 0) {
+            mid = Math.floor(low + (high - low) / 2);
+            iterationCount++; updateIterationDisplay();
+            document.getElementById('statusBox').innerHTML = `<strong>שלב חישוב האמצע (איטרציה ${iterationCount}):</strong> mid = ${mid}. ערך במיקום הנוכחי: <strong>${formatNum(currentArray[mid])}</strong>.`;
+            log(`איטרציה ${iterationCount}: חושב mid = ${mid}, ערך = ${formatNum(currentArray[mid])}`);
+            renderArray(); subStep = 1;
+        } 
+        else if (subStep === 1) {
+            document.getElementById('statusBox').innerHTML = `<strong>בדיקה 1 (האמצע):</strong> האם <code>arr[mid] (${formatNum(currentArray[mid])}) == ${formatNum(target)}</code>?`;
+            renderArray();
+            if (currentArray[mid] === target) {
+                document.getElementById('statusBox').innerHTML = `<strong>נמצאה התאמה מושלמת!</strong> באינדקס <code>mid = ${mid}</code>.`;
+                log(`הצלחה! המספר ${formatNum(target)} נמצא באינדקס mid = ${mid}`, "success"); searchEnded = true;
+            } else { log(`הערך ב-mid (${formatNum(currentArray[mid])}) אינו תואם. עוברים לשכן שמאלי.`); subStep = 2; }
+        } 
+        else if (subStep === 2) {
+            if (mid > low) {
+                document.getElementById('statusBox').innerHTML = `<strong>בדיקה 2 (שכן שמאלי):</strong> האם <code>arr[mid - 1] (${formatNum(currentArray[mid - 1])}) == ${formatNum(target)}</code>?`;
+                renderArray();
+                if (currentArray[mid - 1] === target) {
+                    document.getElementById('statusBox').innerHTML = `<strong>נמצאה התאמה בשכן השמאלי!</strong> באינדקס <code>mid - 1 = ${mid - 1}</code>.`;
+                    log(`הצלחה! המספר ${formatNum(target)} נמצא באינדקס mid - 1 = ${mid - 1}`, "success"); searchEnded = true;
+                } else { log(`הערך בשכן השמאלי (${formatNum(currentArray[mid - 1])}) אינו תואם. עוברים לשכן ימני.`); subStep = 3; }
+            } else { subStep = 3; handleStep(); }
+        } 
+        else if (subStep === 3) {
+            if (mid < high) {
+                document.getElementById('statusBox').innerHTML = `<strong>בדיקה 3 (שכן ימני):</strong> האם <code>arr[mid + 1] (${formatNum(currentArray[mid + 1])}) == ${formatNum(target)}</code>?`;
+                renderArray();
+                if (currentArray[mid + 1] === target) {
+                    document.getElementById('statusBox').innerHTML = `<strong>נמצאה התאמה בשכן הימני!</strong> באינדקס <code>mid + 1 = ${mid + 1}</code>.`;
+                    log(`הצלחה! המספר ${formatNum(target)} נמצא באינדקס mid + 1 = ${mid + 1}`, "success"); searchEnded = true;
+                } else { log(`הערך בשכן הימני (${formatNum(currentArray[mid + 1])}) אינו תואם. עוברים לעדכון הטווחים.`); subStep = 4; }
+            } else { subStep = 4; handleStep(); }
+        } 
+        else if (subStep === 4) {
+            if (target < currentArray[mid]) {
+                document.getElementById('statusBox').innerHTML = `המספר <code>${formatNum(target)}</code> קטן מ-<code>arr[mid] (${formatNum(currentArray[mid])})</code>. עדכון: <code>high = mid - 2</code> (${mid - 2}).`;
+                log(`עדכון טווח: הערך קטן מ-arr[mid], לכן high = mid - 2`); high = mid - 2;
+            } else {
+                document.getElementById('statusBox').innerHTML = `המספר <code>${formatNum(target)}</code> גדול מ-<code>arr[mid] (${formatNum(currentArray[mid])})</code>. עדכון: <code>low = mid + 2</code> (${mid + 2}).`;
+                log(`עדכון טווח: הערך גדול מ-arr[mid], לכן low = mid + 2`); low = mid + 2;
+            }
+            subStep = 0; renderArray();
+        }
+    }
+    window.onload = function() { generateNewArray(); };
+</script>
+</body>
+</html>
