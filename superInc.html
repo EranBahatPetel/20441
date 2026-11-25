@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>superInc</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .array-container {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+            padding: 10px;
+            background: #eef2f3;
+            border-radius: 4px;
+        }
+        #arrayDisplay {
+            direction: ltr; 
+        }
+        .array-item {
+            padding: 10px 14px;
+            background: #fff;
+            border: 2px solid #bdc3c7;
+            border-radius: 4px;
+            font-weight: bold;
+            flex: 1;
+            min-width: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .array-item.current {
+            background: #f1c40f;
+            border-color: #f39c12;
+            transform: scale(1.1);
+        }
+        .array-item.selected {
+            background: #2ecc71;
+            border-color: #27ae60;
+            color: white;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        input[type="number"] {
+            padding: 8px;
+            font-size: 16px;
+            width: 120px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #restartBtn {
+            background-color: #e67e22;
+        }
+        #restartBtn:hover {
+            background-color: #d35400;
+        }
+        .status-box {
+            padding: 15px;
+            background: #f9f9f9;
+            border-right: 5px solid #34495e;
+            margin: 15px 0;
+            font-size: 16px;
+            line-height: 1.6;
+            min-height: 50px;
+        }
+        .message {
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .failure { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>superInc</h1>
+    
+    <div class="array-container" id="arrayDisplay">
+        </div>
+
+    <div class="controls">
+        <label for="kInput">הכנס ערך עבור K:</label>
+        <input type="number" id="kInput" placeholder="למשל: 30" min="1">
+        <button id="startBtn" onclick="initSearch()">הפעל אלגוריתם</button>
+        <button id="restartBtn" onclick="resetCurrentRun()">התחל מחדש</button>
+        <button onclick="generateNewArray()">הגרל מערך חדש</button>
+    </div>
+
+    <div class="status-box" id="statusBox">
+        הכניסו ערך ל-K ולחצו על "הפעל אלגוריתם" או Enter כדי להתחיל. לאחר מכן, לחצו על <strong>Enter</strong> כדי להתקדם שלב אחר שלב באלגוריתם.
+    </div>
+    
+    <div id="messageBox"></div>
+</div>
+
+<script>
+    let arr = [];
+    let k = 0;
+    let originalK = 0;
+    let currentIndex = -1;
+    let isRunning = false;
+    let algorithmFinished = false;
+
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // הגרלת מערך בן 10 איברים שהוא סדרה סופר-עולה
+    function generateNewArray() {
+        arr = [];
+        let sum = 0;
+        
+        for (let i = 0; i < 10; i++) {
+            let nextValue = sum + getRandomInt(1, 10);
+            arr.push(nextValue);
+            sum += nextValue;
+        }
+        
+        renderArray();
+        resetState();
+        document.getElementById('messageBox').className = "";
+        document.getElementById('messageBox').innerHTML = "";
+        document.getElementById('statusBox').innerHTML = "הוגרל מערך חדש! הכניסו K ולחצו Enter להתחלת הסימולציה.";
+        document.getElementById('kInput').disabled = false;
+        document.getElementById('kInput').value = "";
+        document.getElementById('kInput').focus();
+    }
+
+    function renderArray() {
+        const container = document.getElementById('arrayDisplay');
+        container.innerHTML = '';
+        
+        arr.forEach((value, index) => {
+            const item = document.createElement('div');
+            item.className = 'array-item';
+            item.id = `item-${index}`;
+            item.innerText = value;
+            item.title = `אינדקס: ${index}`;
+            container.appendChild(item);
+        });
+    }
+
+    function resetState() {
+        currentIndex = -1;
+        isRunning = false;
+        algorithmFinished = false;
+    }
+
+    function initSearch() {
+        const inputVal = document.getElementById('kInput').value;
+        if (!inputVal || isNaN(inputVal) || parseInt(inputVal) <= 0) {
+            alert("אנא הכנס מספר שלם חיובי תקין עבור K");
+            return;
+        }
+
+        originalK = parseInt(inputVal);
+        k = originalK;
+        currentIndex = arr.length - 1; 
+        isRunning = true;
+        algorithmFinished = false;
+        
+        document.getElementById('kInput').disabled = true;
+        document.getElementById('messageBox').className = "";
+        document.getElementById('messageBox').innerHTML = "";
+        
+        renderArray(); 
+        
+        document.getElementById('statusBox').innerHTML = `<strong>האלגוריתם התחיל!</strong><br>הערך המבוקש K = ${k}.<br>לחץ על <strong>Enter</strong> כדי לבצע את השלב הראשון (אינדקס: ${currentIndex}).`;
+    }
+
+    function resetCurrentRun() {
+        if (originalK === 0) {
+            alert("לא הוגדר K עדיין. אנא הכנס K והפעל תחילה.");
+            return;
+        }
+        k = originalK;
+        currentIndex = arr.length - 1;
+        isRunning = true;
+        algorithmFinished = false;
+        
+        document.getElementById('messageBox').className = "";
+        document.getElementById('messageBox').innerHTML = "";
+        renderArray();
+        
+        document.getElementById('statusBox').innerHTML = `<strong>הריצה אותחלה מחדש!</strong><br>הערך המבוקש K חזר להיות: ${k}.<br>לחץ על <strong>Enter</strong> כדי להתקדם בלולאה מסוף המערך.`;
+    }
+
+    function nextStep() {
+        if (!isRunning || algorithmFinished) return;
+
+        if (currentIndex < arr.length - 1) {
+            const prevItem = document.getElementById(`item-${currentIndex + 1}`);
+            if (prevItem && !prevItem.classList.contains('selected')) {
+                prevItem.classList.remove('current');
+            }
+        }
+
+        if (currentIndex < 0) {
+            algorithmFinished = true;
+            isRunning = false;
+            showResult(false);
+            return;
+        }
+
+        const currentItem = document.getElementById(`item-${currentIndex}`);
+        currentItem.classList.add('current');
+
+        let statusText = `בדיקת אינדקס <strong>${currentIndex}</strong> (ערך האיבר: ${arr[currentIndex]}):<br>`;
+
+        if (arr[currentIndex] <= k) {
+            statusText += `האיבר ${arr[currentIndex]} קטן או שווה ל-K (${k}), לכן מחסירים אותו: K = ${k} - ${arr[currentIndex]} = `;
+            k -= arr[currentIndex];
+            statusText += `<strong>${k}</strong>.<br>`;
+            
+            currentItem.classList.remove('current');
+            currentItem.classList.add('selected');
+        } else {
+            statusText += `האיבר ${arr[currentIndex]} גדול מ-K (${k}), לכן מדלגים עליו.<br>`;
+        }
+
+        if (k === 0) {
+            document.getElementById('statusBox').innerHTML = statusText + `הגענו ל-K = 0!`;
+            algorithmFinished = true;
+            isRunning = false;
+            showResult(true);
+            return;
+        }
+
+        currentIndex--;
+        
+        if (currentIndex >= 0) {
+            statusText += `לחץ <strong>Enter</strong> כדי לעבור לאיבר הבא באינדקס ${currentIndex}.`;
+        } else {
+            statusText += `לחץ <strong>Enter</strong> כדי לסיים את הלולאה.`;
+        }
+        
+        document.getElementById('statusBox').innerHTML = statusText;
+    }
+
+    // ניהול אירועי מקלדת
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            // אם האלגוריתם הסתיים, מקש Enter חסום לחלוטין ואינו עושה דבר
+            if (algorithmFinished) {
+                event.preventDefault();
+                return;
+            }
+
+            if (document.activeElement === document.getElementById('kInput') && !isRunning) {
+                initSearch();
+            } else if (isRunning) {
+                event.preventDefault();
+                nextStep();
+            }
+        }
+    });
+
+    function showResult(isSuccess) {
+        const msgBox = document.getElementById('messageBox');
+        document.getElementById('kInput').disabled = false;
+        
+        if (isSuccess) {
+            msgBox.className = "message success";
+            msgBox.innerHTML = `✔ תשובה: TRUE! נמצאה תת-קבוצה שסכומה המדויק הוא ${originalK}.`;
+        } else {
+            msgBox.className = "message failure";
+            msgBox.innerHTML = `❌ תשובה: FALSE! סרקנו את כל המערך ולא קיימת תת-קבוצה שסכומה הוא ${originalK}.`;
+        }
+        
+        // עדכון תיבת הסטטוס להנחיה ברורה שהשלב הסתיים ומחייב כפתור
+        document.getElementById('statusBox').innerHTML = `<strong>האלגוריתם הסתיים.</strong> כדי להמשיך, לחצו על אחד הכפתורים במסך ("התחל מחדש" או "הגרל מערך חדש").`;
+    }
+
+    window.onload = generateNewArray;
+</script>
+
+</body>
+</html>

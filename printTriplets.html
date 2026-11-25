@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>סימולציית printTriplets</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 15px;
+            color: #333;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-family: monospace;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            background: #ecf0f1;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        label {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        input[type="number"] {
+            padding: 8px 12px;
+            font-size: 16px;
+            width: 100px;
+            border: 2px solid #bdc3c7;
+            border-radius: 4px;
+            text-align: center;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #c0392b;
+        }
+        .instructions {
+            text-align: center;
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+        .array-container {
+            display: flex;
+            justify-content: space-between;
+            direction: ltr; /* שמאל ימין: קטן משמאל, גדול מימין */
+            margin-bottom: 30px;
+            padding: 15px 10px;
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .cell-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+        }
+        .cell {
+            width: 85%;
+            max-width: 45px;
+            aspect-ratio: 1 / 1;
+            border: 2px solid #34495e;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 15px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        .cell.active-i {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+            transform: scale(1.08);
+        }
+        .cell.active-j {
+            background-color: #2ecc71;
+            color: white;
+            border-color: #27ae60;
+            transform: scale(1.08);
+        }
+        .cell.active-k {
+            background-color: #9b59b6;
+            color: white;
+            border-color: #8e44ad;
+            transform: scale(1.08);
+        }
+        .pointer-label {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            height: 18px;
+            text-align: center;
+        }
+        .pointer-label.i-label { color: #3498db; }
+        .pointer-label.j-label { color: #2ecc71; }
+        .pointer-label.k-label { color: #9b59b6; }
+        
+        .index-label {
+            font-size: 11px;
+            color: #95a5a6;
+            margin-top: 4px;
+        }
+        .status-box {
+            background: #f8f9fa;
+            border-right: 5px solid #2c3e50;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .status-line {
+            font-size: 17px;
+            margin: 5px 0;
+        }
+        .match-badge {
+            background-color: #2ecc71;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .results-box {
+            border: 1px solid #dcdde1;
+            background: #fff;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        .results-box h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+            font-size: 18px;
+        }
+        .results-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .results-list li {
+            padding: 6px 12px;
+            background: #f1f2f6;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 15px;
+            border-right: 4px solid #2ecc71;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>printTriplets</h1>
+    
+    <div class="controls">
+        <label for="numInput">הכנס ערך עבור num:</label>
+        <input type="number" id="numInput" min="1" placeholder="למשל 40">
+        <button id="resetBtn">התחל מחדש</button>
+    </div>
+    
+    <div class="instructions" id="instructionText">
+        הזינו ערך בחלונית הקלט ולחצו <strong>Enter</strong> כדי להתחיל את החיפוש.
+    </div>
+
+    <div class="array-container" id="arrayContainer"></div>
+
+    <div class="status-box">
+        <div class="status-line" id="stateDesc">מצב: ממתין לקלט ראשוני.</div>
+        <div class="status-line" id="calcLine">חישוב מכפלה: --</div>
+    </div>
+
+    <div class="results-box">
+        <h3>שלשות שנמצאו והודפסו:</h3>
+        <ul class="results-list" id="resultsList"></ul>
+    </div>
+</div>
+
+<script>
+    function generateRandomSortedArray() {
+        const uniqueNumbers = new Set();
+        while (uniqueNumbers.size < 20) {
+            const rand = Math.floor(Math.random() * 50) + 1;
+            uniqueNumbers.add(rand);
+        }
+        return Array.from(uniqueNumbers).sort((a, b) => a - b);
+    }
+
+    let arr = generateRandomSortedArray();
+    
+    let num = null;
+    let i = 1;
+    let j = 0;
+    let k = 2;
+    let searchStarted = false;
+    let searchFinished = false;
+    let isEvaluatingPhase = false; 
+
+    const arrayContainer = document.getElementById('arrayContainer');
+    const numInput = document.getElementById('numInput');
+    const resetBtn = document.getElementById('resetBtn');
+    const stateDesc = document.getElementById('stateDesc');
+    const calcLine = document.getElementById('calcLine');
+    const resultsList = document.getElementById('resultsList');
+    const instructionText = document.getElementById('instructionText');
+
+    function renderArray() {
+        arrayContainer.innerHTML = '';
+        for (let idx = 0; idx < arr.length; idx++) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'cell-wrapper';
+            
+            const pLabel = document.createElement('div');
+            pLabel.className = 'pointer-label';
+            let pText = '';
+            let pClass = '';
+            
+            if (searchStarted && !searchFinished) {
+                if (idx === i) { pText += 'i'; pClass = 'i-label'; }
+                if (idx === j) { pText += 'j'; pClass = 'j-label'; }
+                if (idx === k) { pText += 'k'; pClass = 'k-label'; }
+            }
+            pLabel.innerText = pText;
+            if (pClass) pLabel.classList.add(pClass);
+            wrapper.appendChild(pLabel);
+            
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.innerText = arr[idx];
+            
+            if (searchStarted && !searchFinished) {
+                if (idx === i) cell.classList.add('active-i');
+                if (idx === j) cell.classList.add('active-j');
+                if (idx === k) cell.classList.add('active-k');
+            }
+            wrapper.appendChild(cell);
+            
+            const idxLabel = document.createElement('div');
+            idxLabel.className = 'index-label';
+            idxLabel.innerText = idx;
+            wrapper.appendChild(idxLabel);
+            
+            arrayContainer.appendChild(wrapper);
+        }
+    }
+
+    function startSearch() {
+        const val = parseInt(numInput.value);
+        if (isNaN(val) || val <= 0) {
+            alert("אנא הזן מספר שלם וחיובי תקין עבור num");
+            return;
+        }
+        num = val;
+        i = 1;
+        j = i - 1;
+        k = i + 1;
+        searchStarted = true;
+        searchFinished = false;
+        isEvaluatingPhase = false; 
+        resultsList.innerHTML = ''; 
+        instructionText.innerHTML = "החיפוש החל! לחצו על <strong>Enter</strong> בכל מקום על המסך כדי להתקדם.";
+        
+        showCurrentPointersState();
+        numInput.blur();
+    }
+
+    function showCurrentPointersState() {
+        if (i >= arr.length - 1) {
+            finishSearch();
+            return;
+        }
+        const currentProd = arr[i] * arr[j] * arr[k];
+        stateDesc.innerText = `מצב: המצביעים ממוקמים ב- i=${i}, j=${j}, k=${k}. נבחן את הערכים המוארים בשלב הבא.`;
+        calcLine.innerText = `חישוב מכפלה נוכחית: ${arr[j]} × ${arr[i]} × ${arr[k]} = ${currentProd}`;
+        renderArray();
+    }
+
+    function evaluateAndAdvance() {
+        const currentProd = arr[i] * arr[j] * arr[k];
+        
+        if (currentProd === num) {
+            const li = document.createElement('li');
+            li.innerHTML = `${arr[j]} * ${arr[i]} * ${arr[k]} == ${num} <span class="match-badge">נמצאה התאמה!</span>`;
+            resultsList.appendChild(li);
+            
+            stateDesc.innerText = `מצב: נמצאה התאמה! המכפלה שווה ל-${num}. המצביעים זזים: k גדל ו-j קטן.`;
+            k++;
+            j--;
+        } 
+        else if (currentProd > num) {
+            stateDesc.innerText = `מצב: המכפלה (${currentProd}) גדולה מ-${num}. מקטינים את j (הזזה שמאלה).`;
+            j--;
+        } 
+        else {
+            stateDesc.innerText = `מצב: המכפלה (${currentProd}) קטנה מ-${num}. מגדילים את k (הזזה ימינה).`;
+            k++;
+        }
+
+        if (j < 0 || k >= arr.length) {
+            i++;
+            if (i < arr.length - 1) {
+                j = i - 1;
+                k = i + 1;
+            } else {
+                searchFinished = true;
+            }
+        }
+    }
+
+    function finishSearch() {
+        searchFinished = true;
+        stateDesc.innerText = "מצב: החיפוש הסתיים בהצלחה!";
+        calcLine.innerText = "הושלמו כל הסריקות האפשריות.";
+        instructionText.innerHTML = "החיפוש הסתיים. ניתן ללחוץ על 'התחל מחדש' כדי להריץ שוב.";
+        renderArray();
+    }
+
+    function stepAlgorithm() {
+        if (!searchStarted || searchFinished) return;
+
+        if (!isEvaluatingPhase) {
+            evaluateAndAdvance();
+            isEvaluatingPhase = true;
+            
+            if (searchFinished) {
+                finishSearch();
+            } else {
+                showCurrentPointersState();
+                isEvaluatingPhase = false;
+            }
+        }
+    }
+
+    function resetAll() {
+        numInput.value = '';
+        num = null;
+        i = 1;
+        j = 0;
+        k = 2;
+        searchStarted = false;
+        searchFinished = false;
+        isEvaluatingPhase = false;
+        resultsList.innerHTML = '';
+        stateDesc.innerText = "מצב: ממתין לקלט ראשוני.";
+        calcLine.innerText = "חישוב מכפלה: --";
+        instructionText.innerHTML = "הזן ערך בחלונית הקלט ולחץ <strong>Enter</strong> כדי להתחיל את החיפוש.";
+        renderArray();
+        numInput.focus();
+    }
+
+    numInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.stopPropagation();
+            startSearch();
+        }
+    });
+
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            if (document.activeElement === resetBtn) return;
+            
+            if (searchStarted && !searchFinished) {
+                stepAlgorithm();
+            } else if (!searchStarted && numInput.value !== '') {
+                startSearch();
+            }
+        }
+    });
+
+    resetBtn.addEventListener('click', resetAll);
+    renderArray();
+</script>
+
+</body>
+</html>

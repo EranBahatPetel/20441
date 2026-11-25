@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>isSink</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 28px;
+        }
+
+        .status-badge {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            padding: 10px;
+            margin-bottom: 20px;
+            background-color: #e8f4fd;
+            color: var(--accent-color);
+            border-radius: 8px;
+            border: 1px solid #d4eafd;
+        }
+
+        .matrix-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .matrix-table-wrapper {
+            direction: ltr;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        td, th {
+            width: 38px;
+            height: 38px;
+            border: 1px solid #ccc;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .index-header {
+            background-color: #eaeded;
+            color: #7f8c8d;
+            font-weight: bold;
+            font-size: 12px;
+            border: none;
+        }
+
+        .corner-header {
+            background-color: transparent;
+            border: none;
+        }
+
+        /* עיצוב מיוחד לאלכסון הראשי - שימוש ב-!important כדי שישאר מודגש תמיד */
+        .diagonal-cell {
+            background-color: #d6eaf8 !important; 
+            color: #1b4f72 !important;
+            border: 2px solid #2e86c1 !important;
+        }
+
+        .current-cell {
+            background-color: #f1c40f !important; 
+            color: #000 !important;
+            transform: scale(1.05);
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
+        }
+
+        .eliminated-row {
+            background-color: #fadbd8; 
+            color: #78281f;
+        }
+
+        .candidate-row {
+            background-color: #d4efdf; 
+            color: #145a32;
+        }
+
+        .sink-cell {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.08); }
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        button {
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        button:hover {
+            background-color: #7f8c8d;
+        }
+
+        button:focus {
+            outline: none;
+        }
+
+        .explanation-box {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 100px;
+            font-size: 16px;
+            line-height: 1.6;
+            border-right: 5px solid var(--accent-color);
+            margin-top: 20px;
+            direction: rtl;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            font-size: 13px;
+            flex-wrap: wrap;
+            direction: rtl;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>isSink</h1>
+
+    <div id="status" class="status-badge">שלב א': חיפוש במטריצה שמכילה בור מובטח</div>
+
+    <div class="matrix-container">
+        <div class="matrix-table-wrapper">
+            <table id="matrixTable"></table>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background-color: #d6eaf8; border: 1px solid #2e86c1;"></div>אלכסון ראשי (מודגש תמיד)</div>
+        <div class="legend-item"><div class="legend-color" style="background-color: #f1c40f;"></div>תא נבדק נוכחי (שורה, עמודה)</div>
+        <div class="legend-item"><div class="legend-color" style="background-color: #fadbd8;"></div>שורה שנפסלה (אינה בור)</div>
+        <div class="legend-item"><div class="legend-color" style="background-color: #d4efdf;"></div>שורה מועמדת מובילה</div>
+        <div class="legend-item"><div class="legend-color" style="background-color: #2ecc71;"></div>הבור שנמצא!</div>
+    </div>
+
+    <div class="controls">
+        <button id="restartBtn" onclick="restartCurrentSearch()">התחל מחדש על מטריצה זו</button>
+    </div>
+
+    <div class="explanation-box" id="explanation">
+        טוען את הסימולציה... לחץ על מקש Enter במקלדת כדי להתחיל את הצעד הראשון.
+    </div>
+</div>
+
+<script>
+    const N = 10;
+    let matrix = [];
+    let currentPhase = 1; // 1: With Sink, 2: Without Sink
+    let stepIndex = 0;
+    
+    let matrixPhase1 = [];
+    let matrixPhase2 = [];
+    
+    let stepsLog = [];
+
+    function generateMatrices() {
+        // מטריצה עם בור
+        matrixPhase1 = Array.from({ length: N }, () => Array(N).fill(0));
+        const targetSink = Math.floor(Math.random() * N);
+        for (let r = 0; r < N; r++) {
+            for (let c = 0; c < N; c++) {
+                if (r === targetSink) {
+                    matrixPhase1[r][c] = 0;
+                } else if (c === targetSink) {
+                    matrixPhase1[r][c] = 1;
+                } else {
+                    matrixPhase1[r][c] = Math.floor(Math.random() * 2);
+                }
+            }
+        }
+        
+        // מטריצה בלי בור
+        matrixPhase2 = Array.from({ length: N }, () => Array(N).fill(0));
+        for (let r = 0; r < N; r++) {
+            for (let c = 0; c < N; c++) {
+                matrixPhase2[r][c] = Math.floor(Math.random() * 2);
+            }
+        }
+        // וידוא שאין שום בור במקרה
+        for (let r = 0; r < N; r++) {
+            let isRowZero = true;
+            for(let c=0; c<N; c++) if(matrixPhase2[r][c] !== 0) isRowZero = false;
+            if(isRowZero) {
+                matrixPhase2[r][Math.floor(Math.random() * N)] = 1;
+            }
+        }
+    }
+
+    function initSimulation() {
+        if (currentPhase === 1) {
+            matrix = JSON.parse(JSON.stringify(matrixPhase1));
+        } else {
+            matrix = JSON.parse(JSON.stringify(matrixPhase2));
+        }
+
+        stepIndex = 0;
+        stepsLog = [];
+        
+        buildLog();
+        renderMatrix();
+        showCurrentStepDetails();
+    }
+
+    function buildLog() {
+        let tempI = 0;
+        let tempJ = 0;
+        let eliminatedRows = new Set();
+        
+        while (tempI < N && tempJ < N) {
+            let val = matrix[tempI][tempJ];
+            
+            if (tempI === tempJ) {
+                if (val !== 0) {
+                    eliminatedRows.add(tempI);
+                    stepsLog.push({
+                        stage: 'elimination',
+                        i: tempI,
+                        j: tempJ,
+                        action: 'diagonal_one',
+                        desc: `אנו נמצאים על האלכסון הראשי בתא (שורה ${tempI}, עמודה ${tempJ}) והערך בו הוא 1! מכיוון ששורת בור חייבת להכיל אך ורק אפסים, שורה מספר ${tempI} נפסלת מיד מלהיות בור. אנו עוברים לשורה הבאה.`,
+                        eliminated: new Set(eliminatedRows)
+                    });
+                    tempI = Math.max(tempI + 1, tempJ);
+                } else {
+                    stepsLog.push({
+                        stage: 'elimination',
+                        i: tempI,
+                        j: tempJ,
+                        action: 'skip_diagonal',
+                        desc: `אנו נמצאים על האלכסון הראשי בתא (שורה ${tempI}, עמודה ${tempJ}) והערך בו הוא 0. ערך זה תקין ואינו פוסל את השורה או את העמודה. אנו מתקדמים לעמודה הבאה כדי להמשיך לבדוק את השורה הנוכחית.`,
+                        eliminated: new Set(eliminatedRows)
+                    });
+                    tempJ++;
+                }
+                continue;
+            }
+            
+            if (val === 1) {
+                eliminatedRows.add(tempI);
+                stepsLog.push({
+                    stage: 'elimination',
+                    i: tempI,
+                    j: tempJ,
+                    action: 'row_eliminated',
+                    desc: `הערך בתא (שורה ${tempI}, עמודה ${tempJ}) הוא 1. מכיוון ששורת בור חייבת להכיל אפסים בלבד, שורה מספר ${tempI} נפסלת סופית! אנו עוברים לבדוק את השורה הבאה.`,
+                    eliminated: new Set(eliminatedRows)
+                });
+                tempI = Math.max(tempI + 1, tempJ);
+            } else {
+                stepsLog.push({
+                    stage: 'elimination',
+                    i: tempI,
+                    j: tempJ,
+                    action: 'col_eliminated',
+                    desc: `הערך בתא (שורה ${tempI}, עמודה ${tempJ}) הוא 0. מכיוון שבעמודת הבור כל הערכים (פרט לאלכסון) חייבים להיות 1, עמודה מספר ${tempJ} נפסלת סופית מלהיות בור! אנו מתקדמים לעמודה הבאה.`,
+                    eliminated: new Set(eliminatedRows)
+                });
+                tempJ++;
+            }
+        }
+        
+        let finalCandidate = tempI;
+        if (finalCandidate >= N) {
+            stepsLog.push({
+                stage: 'finished',
+                action: 'no_sink_found',
+                desc: `הגענו לקצה המטריצה. לא נותרו שורות מועמדות. אין בור במטריצה הזו!`,
+                eliminated: new Set(eliminatedRows),
+                candidate: -1
+            });
+            return;
+        }
+
+        stepsLog.push({
+            stage: 'verification_start',
+            candidate: finalCandidate,
+            desc: `שלב הסינון הסתיים. השורה היחידה שלא נפסלה היא שורה מספר ${finalCandidate}. כעת נבצע אימות לינארי כדי לוודא שכל האיברים בשורה זו הם 0, וכל האיברים בעמודה זו (פרט לאלכסון) הם 1.`,
+            eliminated: new Set(eliminatedRows)
+        });
+
+        // אימות שורה
+        let isValid = true;
+        for (let k = 0; k < N; k++) {
+            let val = matrix[finalCandidate][k];
+            if (val !== 0) {
+                isValid = false;
+                stepsLog.push({
+                    stage: 'verification_row_failed',
+                    candidate: finalCandidate,
+                    vIdx: k,
+                    desc: `האימות נכשל! מצאנו בתא (שורה ${finalCandidate}, עמודה ${k}) את הערך 1. שורת הבור חייבת להכיל אפסים בלבד. לכן המועמד נפסל ואין בור במטריצה.`,
+                    eliminated: new Set(eliminatedRows)
+                });
+                break;
+            } else {
+                stepsLog.push({
+                    stage: 'verification_row_ok',
+                    candidate: finalCandidate,
+                    vIdx: k,
+                    desc: `אימות שורה: התא (שורה ${finalCandidate}, עמודה ${k}) מכיל 0, כנדרש משורת בור.`,
+                    eliminated: new Set(eliminatedRows)
+                });
+            }
+        }
+
+        if (isValid) {
+            // אימות עמודה
+            for (let k = 0; k < N; k++) {
+                if (k === finalCandidate) continue;
+                let val = matrix[k][finalCandidate];
+                if (val !== 1) {
+                    isValid = false;
+                    stepsLog.push({
+                        stage: 'verification_col_failed',
+                        candidate: finalCandidate,
+                        vIdx: k,
+                        desc: `האימות נכשל! מצאנו בתא (שורה ${k}, עמודה ${finalCandidate}) את הערך 0. כל הערכים בעמודת הבור (מחוץ לאלכסון) חייבים להיות 1. המועמד נפסל ואין בור.`,
+                        eliminated: new Set(eliminatedRows)
+                    });
+                    break;
+                } else {
+                    stepsLog.push({
+                        stage: 'verification_col_ok',
+                        candidate: finalCandidate,
+                        vIdx: k,
+                        desc: `אימות עמודה: התא (שורה ${k}, עמודה ${finalCandidate}) מכיל 1, כנדרש מעמודת בור.`,
+                        eliminated: new Set(eliminatedRows)
+                    });
+                }
+            }
+        }
+
+        if (isValid) {
+            stepsLog.push({
+                stage: 'finished',
+                action: 'sink_found',
+                candidate: finalCandidate,
+                desc: `האימות הושלם בהצלחה! מצאנו בוודאות כי שורה ועמודה מספר <strong>${finalCandidate}</strong> היא בור חוקי במטריצה!`,
+                eliminated: new Set(eliminatedRows)
+            });
+        } else {
+            stepsLog.push({
+                stage: 'finished',
+                action: 'no_sink_found',
+                candidate: finalCandidate,
+                desc: `לאחר שלב האימות, התברר שהמועמד אינו בור אמיתי. אין בור במטריצה הזו!`,
+                eliminated: new Set(eliminatedRows)
+            });
+        }
+    }
+
+    function renderMatrix() {
+        const table = document.getElementById('matrixTable');
+        table.innerHTML = '';
+        
+        const currentStep = stepsLog[stepIndex] || {};
+        
+        // כותרת עמודות
+        const headerRow = document.createElement('tr');
+        const cornerTh = document.createElement('th');
+        cornerTh.className = 'corner-header';
+        headerRow.appendChild(cornerTh);
+        for (let c = 0; c < N; c++) {
+            const th = document.createElement('th');
+            th.className = 'index-header';
+            th.textContent = c;
+            headerRow.appendChild(th);
+        }
+        table.appendChild(headerRow);
+        
+        // שורות המטריצה
+        for (let r = 0; r < N; r++) {
+            const tr = document.createElement('tr');
+            
+            const rowTh = document.createElement('th');
+            rowTh.className = 'index-header';
+            rowTh.textContent = r;
+            tr.appendChild(rowTh);
+            
+            for (let c = 0; c < N; c++) {
+                const td = document.createElement('td');
+                td.textContent = matrix[r][c];
+                
+                // צביעת שורות שנפסלו (חלש יותר)
+                if (currentStep.eliminated && currentStep.eliminated.has(r)) {
+                    td.classList.add('eliminated-row');
+                }
+                
+                // הדגשת הצעד הנוכחי או שורת המועמד
+                if (currentStep.stage === 'elimination') {
+                    if (r === currentStep.i && c === currentStep.j) {
+                        td.classList.add('current-cell');
+                    } else if (r === currentStep.i) {
+                        td.classList.add('candidate-row');
+                    }
+                } else if (currentStep.stage === 'verification_row_ok' || currentStep.stage === 'verification_row_failed') {
+                    if (r === currentStep.candidate && c === currentStep.vIdx) {
+                        td.classList.add('current-cell');
+                    } else if (r === currentStep.candidate) {
+                        td.classList.add('candidate-row');
+                    }
+                } else if (currentStep.stage === 'verification_col_ok' || currentStep.stage === 'verification_col_failed') {
+                    if (r === currentStep.vIdx && c === currentStep.candidate) {
+                        td.classList.add('current-cell');
+                    } else if (c === currentStep.candidate) {
+                        td.classList.add('candidate-row');
+                    }
+                } else if (currentStep.stage === 'finished' && currentStep.action === 'sink_found') {
+                    if (r === currentStep.candidate || c === currentStep.candidate) {
+                        td.classList.add('sink-cell');
+                    }
+                }
+                
+                // הדגשת האלכסון הראשי תמיד! (דורס צבעי פסילה באמצעות CSS)
+                if (r === c) {
+                    td.classList.add('diagonal-cell');
+                    // אם זה התא הנבדק כרגע באלכסון, נרצה בכל זאת לסמן אותו כנוכחי
+                    if (currentStep.stage === 'elimination' && r === currentStep.i && c === currentStep.j) {
+                        td.classList.add('current-cell');
+                    }
+                }
+                
+                tr.appendChild(td);
+            }
+            table.appendChild(tr);
+        }
+    }
+
+    function showCurrentStepDetails() {
+        const currentStep = stepsLog[stepIndex];
+        if (!currentStep) return;
+        document.getElementById('explanation').innerHTML = currentStep.desc;
+        renderMatrix();
+    }
+
+    function advanceStep() {
+        if (stepIndex < stepsLog.length - 1) {
+            stepIndex++;
+            showCurrentStepDetails();
+        } else {
+            if (currentPhase === 1) {
+                currentPhase = 2;
+                document.getElementById('status').textContent = "שלב ב': חיפוש במטריצה אקראית ללא בור (מקרה כשלון)";
+                document.getElementById('status').style.backgroundColor = '#fdebd0';
+                document.getElementById('status').style.color = '#e67e22';
+                initSimulation();
+            } else {
+                alert("הסימולציה הסתיימה בהצלחה עבור שני המקרים! לחץ על Enter כדי להתחיל מהתחלה.");
+                currentPhase = 1;
+                document.getElementById('status').textContent = "שלב א': חיפוש במטריצה שמכילה בור מובטח";
+                document.getElementById('status').style.backgroundColor = '#e8f4fd';
+                document.getElementById('status').style.color = '#3498db';
+                generateMatrices();
+                initSimulation();
+            }
+        }
+    }
+
+    function restartCurrentSearch() {
+        initSimulation();
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            advanceStep();
+        }
+    });
+
+    generateMatrices();
+    initSimulation();
+</script>
+
+</body>
+</html>

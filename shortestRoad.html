@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>סימולטור אלגוריתם shortestRoad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 20px;
+            color: #333;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .instructions {
+            background-color: #e8f4f8;
+            padding: 10px;
+            border-left: 5px solid #2980b9;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .simulation-section {
+            background: #fdfdfd;
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 25px;
+            transition: opacity 0.4s;
+        }
+        .inactive-section {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .road-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .road-label {
+            width: 80px;
+            font-weight: bold;
+            font-size: 1em;
+        }
+        .array {
+            display: flex;
+            gap: 2px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+            direction: ltr; 
+            width: 100%;
+        }
+        .cell {
+            min-width: 42px;
+            height: 45px;
+            border: 2px solid #bdc3c7;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #fff;
+            font-weight: bold;
+            position: relative;
+            transition: all 0.2s;
+        }
+        .cell .index {
+            font-size: 0.7em;
+            color: #7f8c8d;
+            position: absolute;
+            top: 1px;
+        }
+        .cell .val {
+            margin-top: 12px;
+            font-size: 1em;
+        }
+        
+        .active-road1 {
+            background-color: #ffeaa7;
+            border-color: #f1c40f;
+        }
+        .active-road2 {
+            background-color: #dfe6e9;
+            border-color: #7f8c8d;
+        }
+        
+        .current-checking-path {
+            background-color: #2ecc71 !important;
+            border-color: #27ae60 !important;
+            color: white !important;
+        }
+        .current-checking-path .index {
+            color: #e8f8f5 !important;
+        }
+
+        .pointer {
+            border: 3px solid #e74c3c !important;
+            transform: scale(1.03);
+        }
+        .pointer::after {
+            content: '⬇';
+            position: absolute;
+            top: -22px;
+            color: #e74c3c;
+            font-size: 1em;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            background: #ecf0f1;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            align-items: center;
+        }
+        .stat-box {
+            font-size: 1em;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border-right: 5px solid #3498db;
+            text-align: center;
+        }
+        .stat-box.total-box {
+            border-right: 5px solid #9b59b6;
+            background-color: #f5eef8;
+        }
+        .stat-box span {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background-color: #2ecc71;
+            color: white;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #27ae60;
+        }
+        button.reset-btn {
+            background-color: #e67e22;
+        }
+        button.reset-btn:hover {
+            background-color: #d35400;
+        }
+        .message-box {
+            margin-top: 20px;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            border-radius: 6px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>shortestRoad</h1>
+    
+    <div class="instructions">
+        הוראות: לחץ על מקש <strong>Enter</strong> במקלדת כדי להתקדם.
+    </div>
+
+    <div id="section-runA" class="simulation-section">
+        <h2>ריצה א': התחלה ב-road1 ומעבר ל-road2</h2>
+        <div class="road-container">
+            <div class="road-label">road1:</div>
+            <div id="r1-runA" class="array"></div>
+        </div>
+        <div class="road-container">
+            <div class="road-label">road2:</div>
+            <div id="r2-runA" class="array"></div>
+        </div>
+        <div class="dashboard">
+            <div class="stat-box total-box">sum1 + sum2 = <span id="vA-total">-</span></div>
+            <div class="stat-box">road1Sum: <span id="vA-road1Sum">-</span></div>
+            <div class="stat-box">road2Sum: <span id="vA-road2Sum">-</span></div>
+            <div class="stat-box">minValue: <span id="vA-minValue">-</span></div>
+            <div class="stat-box">minLocation: <span id="vA-minLocation">-</span></div>
+        </div>
+    </div>
+
+    <div id="section-runB" class="simulation-section inactive-section">
+        <h2>ריצה ב': התחלה ב-road2 ומעבר ל-road1</h2>
+        <div class="road-container">
+            <div class="road-label">road1:</div>
+            <div id="r1-runB" class="array"></div>
+        </div>
+        <div class="road-container">
+            <div class="road-label">road2:</div>
+            <div id="r2-runB" class="array"></div>
+        </div>
+        <div class="dashboard">
+            <div class="stat-box total-box">sum2 + sum1 = <span id="vB-total">-</span></div>
+            <div class="stat-box">road2Sum: <span id="vB-road2Sum">-</span></div>
+            <div class="stat-box">road1Sum: <span id="vB-road1Sum">-</span></div>
+            <div class="stat-box">minValue: <span id="vB-minValue">-</span></div>
+            <div class="stat-box">minLocation: <span id="vB-minLocation">-</span></div>
+        </div>
+    </div>
+
+    <div id="message" class="message-box success"></div>
+
+    <div class="controls">
+        <button id="next-step-btn">צעד הבא (או הקש Enter)</button>
+        <button class="reset-btn" onclick="resetSimulation(false)">התחל מחדש (אותם מערכים)</button>
+        <button class="reset-btn" style="background-color: #34495e;" onclick="resetSimulation(true)">הגרל מערכים חדשים (אורך 20)</button>
+    </div>
+</div>
+
+<script>
+    const ARRAY_LENGTH = 20;
+    let road1 = [];
+    let road2 = [];
+    
+    let runA = { road1Sum: 0, road2Sum: 0, minValue: undefined, minLocation: undefined };
+    let runB = { road1Sum: 0, road2Sum: 0, minValue: undefined, minLocation: undefined };
+    
+    let currentStage = 1; 
+    let loopIndex = 1;
+
+    function getRandomVal() {
+        return Math.floor(Math.random() * 15) + 2; 
+    }
+
+    function generateArrays() {
+        road1 = [];
+        road2 = [];
+        for(let i = 0; i < ARRAY_LENGTH; i++) {
+            road1.push(getRandomVal());
+            road2.push(getRandomVal());
+        }
+    }
+
+    function renderArraysForRun(suffix, r1Id, r2Id) {
+        const r1Container = document.getElementById(r1Id);
+        const r2Container = document.getElementById(r2Id);
+        r1Container.innerHTML = '';
+        r2Container.innerHTML = '';
+
+        for(let i = 0; i < ARRAY_LENGTH; i++) {
+            r1Container.innerHTML += `<div class="cell" id="r1-${suffix}-${i}"><span class="index">${i}</span><span class="val">${road1[i]}</span></div>`;
+            r2Container.innerHTML += `<div class="cell" id="r2-${suffix}-${i}"><span class="index">${i}</span><span class="val">${road2[i]}</span></div>`;
+        }
+    }
+
+    function updateDashboards() {
+        document.getElementById('vA-road1Sum').innerText = runA.road1Sum;
+        document.getElementById('vA-road2Sum').innerText = runA.road2Sum;
+        document.getElementById('vA-total').innerText = runA.road1Sum + runA.road2Sum;
+        document.getElementById('vA-minValue').innerText = runA.minValue !== undefined ? runA.minValue : '-';
+        document.getElementById('vA-minLocation').innerText = runA.minLocation !== undefined ? runA.minLocation : '-';
+
+        document.getElementById('vB-road1Sum').innerText = runB.road1Sum;
+        document.getElementById('vB-road2Sum').innerText = runB.road2Sum;
+        document.getElementById('vB-total').innerText = runB.road1Sum + runB.road2Sum;
+        document.getElementById('vB-minValue').innerText = runB.minValue !== undefined ? runB.minValue : '-';
+        document.getElementById('vB-minLocation').innerText = runB.minLocation !== undefined ? runB.minLocation : '-';
+    }
+
+    function clearVisuals() {
+        document.querySelectorAll('.cell').forEach(cell => {
+            cell.classList.remove('pointer', 'active-road1', 'active-road2', 'current-checking-path');
+        });
+    }
+
+    function resetSimulation(forceNewArrays = false) {
+        if (forceNewArrays || road1.length === 0) {
+            generateArrays();
+        }
+        
+        renderArraysForRun('runA', 'r1-runA', 'r2-runA');
+        renderArraysForRun('runB', 'r1-runB', 'r2-runB');
+        
+        runA.road2Sum = 0;
+        runA.road1Sum = road1[0];
+        runA.minValue = undefined;
+        runA.minLocation = undefined;
+
+        runB.road1Sum = 0;
+        runB.road2Sum = road2[0];
+        runB.minValue = undefined;
+        runB.minLocation = undefined;
+        
+        currentStage = 1;
+        loopIndex = 1;
+        
+        document.getElementById('message').style.display = 'none';
+        document.getElementById('section-runA').classList.remove('inactive-section');
+        document.getElementById('section-runB').classList.add('inactive-section');
+
+        clearVisuals();
+        updateDashboards();
+        
+        document.getElementById(`r1-runA-0`).classList.add('active-road1');
+        document.getElementById(`r2-runA-${loopIndex}`).classList.add('pointer');
+    }
+
+    function nextStep() {
+        clearVisuals();
+
+        // --- ריצה א' - שלב 1: לולאת סכימה ראשונית ---
+        if (currentStage === 1) {
+            if (loopIndex < ARRAY_LENGTH) {
+                runA.road2Sum += road2[loopIndex];
+                for(let k = 1; k <= loopIndex; k++) {
+                    document.getElementById(`r2-runA-${k}`).classList.add('active-road2');
+                }
+                document.getElementById(`r1-runA-0`).classList.add('active-road1');
+                
+                updateDashboards();
+                loopIndex++;
+
+                if (loopIndex < ARRAY_LENGTH) {
+                    document.getElementById(`r2-runA-${loopIndex}`).classList.add('pointer');
+                } else {
+                    runA.minValue = runA.road1Sum + runA.road2Sum;
+                    runA.minLocation = 0;
+                    updateDashboards();
+                }
+            } else {
+                currentStage = 2;
+                highlightCurrentPath('runA', 0, true);
+                document.getElementById(`r1-runA-0`).classList.add('pointer');
+                document.getElementById(`r2-runA-0`).classList.add('pointer');
+            }
+            return;
+        }
+
+        // --- ריצה א' - שלב 2: תצוגת אינדקס 0 בירוק ---
+        if (currentStage === 2) {
+            currentStage = 3;
+            loopIndex = 1;
+            
+            runA.road1Sum += road1[loopIndex];
+            runA.road2Sum -= road2[loopIndex];
+            if (runA.road1Sum + runA.road2Sum < runA.minValue) {
+                runA.minValue = runA.road1Sum + runA.road2Sum;
+                runA.minLocation = loopIndex;
+            }
+            updateDashboards();
+            highlightCurrentPath('runA', loopIndex, true);
+            document.getElementById(`r1-runA-${loopIndex}`).classList.add('pointer');
+            document.getElementById(`r2-runA-${loopIndex}`).classList.add('pointer');
+            loopIndex++;
+            return;
+        }
+
+        // --- ריצה א' - שלב 3: המשך לולאת חיפוש ---
+        if (currentStage === 3) {
+            if (loopIndex < ARRAY_LENGTH) {
+                runA.road1Sum += road1[loopIndex];
+                runA.road2Sum -= road2[loopIndex];
+                if (runA.road1Sum + runA.road2Sum < runA.minValue) {
+                    runA.minValue = runA.road1Sum + runA.road2Sum;
+                    runA.minLocation = loopIndex;
+                }
+
+                updateDashboards();
+                highlightCurrentPath('runA', loopIndex, true);
+                document.getElementById(`r1-runA-${loopIndex}`).classList.add('pointer');
+                document.getElementById(`r2-runA-${loopIndex}`).classList.add('pointer');
+                loopIndex++;
+            } else {
+                highlightFinalBestPath('runA', runA.minLocation, true);
+                document.getElementById('section-runA').classList.add('inactive-section');
+                document.getElementById('section-runB').classList.remove('inactive-section');
+                
+                currentStage = 4;
+                loopIndex = 1;
+                document.getElementById(`r2-runB-0`).classList.add('active-road2');
+                document.getElementById(`r1-runB-${loopIndex}`).classList.add('pointer');
+            }
+            return;
+        }
+
+        // --- ריצה ב' - שלב 4: לולאת סכימה ראשונית ---
+        if (currentStage === 4) {
+            if (loopIndex < ARRAY_LENGTH) {
+                runB.road1Sum += road1[loopIndex];
+                for(let k = 1; k <= loopIndex; k++) {
+                    document.getElementById(`r1-runB-${k}`).classList.add('active-road1');
+                }
+                document.getElementById(`r2-runB-0`).classList.add('active-road2');
+                
+                updateDashboards();
+                loopIndex++;
+
+                if (loopIndex < ARRAY_LENGTH) {
+                    document.getElementById(`r1-runB-${loopIndex}`).classList.add('pointer');
+                } else {
+                    runB.minValue = runB.road1Sum + runB.road2Sum;
+                    runB.minLocation = 0;
+                    updateDashboards();
+                }
+            } else {
+                currentStage = 5;
+                highlightCurrentPath('runB', 0, false);
+                document.getElementById(`r1-runB-0`).classList.add('pointer');
+                document.getElementById(`r2-runB-0`).classList.add('pointer');
+            }
+            return;
+        }
+
+        // --- ריצה ב' - שלב 5: תצוגת אינדקס 0 בירוק ---
+        if (currentStage === 5) {
+            currentStage = 6;
+            loopIndex = 1;
+
+            runB.road2Sum += road2[loopIndex];
+            runB.road1Sum -= road1[loopIndex];
+            if (runB.road1Sum + runB.road2Sum < runB.minValue) {
+                runB.minValue = runB.road1Sum + runB.road2Sum;
+                runB.minLocation = loopIndex;
+            }
+            updateDashboards();
+            highlightCurrentPath('runB', loopIndex, false);
+            document.getElementById(`r1-runB-${loopIndex}`).classList.add('pointer');
+            document.getElementById(`r2-runB-${loopIndex}`).classList.add('pointer');
+            loopIndex++;
+            return;
+        }
+
+        // --- ריצה ב' - שלב 6: המשך לולאת חיפוש ---
+        if (currentStage === 6) {
+            if (loopIndex < ARRAY_LENGTH) {
+                runB.road2Sum += road2[loopIndex];
+                runB.road1Sum -= road1[loopIndex];
+                if (runB.road1Sum + runB.road2Sum < runB.minValue) {
+                    runB.minValue = runB.road1Sum + runB.road2Sum;
+                    runB.minLocation = loopIndex;
+                }
+
+                updateDashboards();
+                highlightCurrentPath('runB', loopIndex, false);
+                document.getElementById(`r1-runB-${loopIndex}`).classList.add('pointer');
+                document.getElementById(`r2-runB-${loopIndex}`).classList.add('pointer');
+                loopIndex++;
+            } else {
+                currentStage = 7;
+                clearVisuals();
+                document.getElementById('section-runA').classList.remove('inactive-section');
+                
+                highlightFinalBestPath('runA', runA.minLocation, true);
+                highlightFinalBestPath('runB', runB.minLocation, false);
+                
+                const msgBox = document.getElementById('message');
+                let finalMsg = "";
+                
+                if (runA.minValue <= runB.minValue) {
+                    finalMsg = `הסימולציה הסתיימה! המסלול האופטימלי הכולל נמצא בריצה א' (התחלה ב-road1) באורך של ${runA.minValue}, נקודת מעבר: ${runA.minLocation}.`;
+                } else {
+                    finalMsg = `הסימולציה הסתיימה! המסלול האופטימלי הכולל נמצא בריצה ב' (התחלה ב-road2) באורך של ${runB.minValue}, נקודת מעבר: ${runB.minLocation}.`;
+                }
+                
+                msgBox.innerText = finalMsg;
+                msgBox.style.display = 'block';
+            }
+        }
+    }
+
+    function highlightCurrentPath(suffix, currentIndex, isRoad1ToRoad2) {
+        for (let i = 0; i < ARRAY_LENGTH; i++) {
+            if (isRoad1ToRoad2) {
+                if (i <= currentIndex) {
+                    document.getElementById(`r1-${suffix}-${i}`).classList.add('current-checking-path');
+                } else {
+                    document.getElementById(`r2-${suffix}-${i}`).classList.add('current-checking-path');
+                }
+            } else {
+                if (i <= currentIndex) {
+                    document.getElementById(`r2-${suffix}-${i}`).classList.add('current-checking-path');
+                } else {
+                    document.getElementById(`r1-${suffix}-${i}`).classList.add('current-checking-path');
+                }
+            }
+        }
+    }
+
+    function highlightFinalBestPath(suffix, switchIndex, isRoad1ToRoad2) {
+        for (let i = 0; i < ARRAY_LENGTH; i++) {
+            if (isRoad1ToRoad2) {
+                if (i <= switchIndex) {
+                    document.getElementById(`r1-${suffix}-${i}`).classList.add('active-road1');
+                } else {
+                    document.getElementById(`r2-${suffix}-${i}`).classList.add('active-road2');
+                }
+            } else {
+                if (i <= switchIndex) {
+                    document.getElementById(`r2-${suffix}-${i}`).classList.add('active-road2');
+                } else {
+                    document.getElementById(`r1-${suffix}-${i}`).classList.add('active-road1');
+                }
+            }
+        }
+    }
+
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            nextStep();
+        }
+    });
+
+    document.getElementById('next-step-btn').addEventListener('click', nextStep);
+
+    resetSimulation(true);
+</script>
+
+</body>
+</html>

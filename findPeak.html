@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>findPeak</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        button {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 0 10px;
+            transition: background 0.2s;
+        }
+        button.reset-btn {
+            background-color: #e74c3c;
+        }
+        button.reset-btn:hover {
+            background-color: #c0392b;
+        }
+        .array-container {
+            display: block;
+            margin: 50px auto 30px auto;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+        .array-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 12px 6px;
+            direction: ltr;
+        }
+        .array-cell {
+            text-align: center;
+            border: 1px solid #bdc3c7;
+            background: #fff;
+            height: 45px;
+            line-height: 45px;
+            font-weight: bold;
+            font-size: 15px;
+            position: relative;
+            transition: all 0.2s;
+            border-radius: 3px;
+            color: #333;
+        }
+        .array-cell .cell-value {
+            display: inline-block;
+            vertical-align: middle;
+        }
+        /* עדכון: צביעת מסגרת ומספר בלבד באדום עבור פסגות לינאריות */
+        .array-cell.linear-peak {
+            border: 2px solid #e74c3c !important;
+            color: #e74c3c !important;
+        }
+        .array-cell.active-range {
+            background-color: #fffde7;
+            /* שומר על גבול אדום אם זו פסגה, אחרת צהוב */
+            border-color: #f1c40f; 
+        }
+        .array-cell.mid-cell {
+            background-color: #3498db !important;
+            /* שומר על טקסט לבן לטובת קריאות אלא אם כן זו פסגה אדומה */
+            color: white;
+        }
+        /* פתרון סופי דורס את הצבעים באפקט ירוק */
+        .array-cell.peak-cell {
+            background-color: #2ecc71 !important;
+            color: white !important;
+            border-color: #27ae60 !important;
+            animation: pulse 1s infinite alternate;
+        }
+        .index-label {
+            position: absolute;
+            bottom: -16px;
+            left: 0;
+            right: 0;
+            font-size: 10px;
+            color: #7f8c8d;
+            line-height: 12px;
+            text-align: center;
+            font-weight: normal;
+        }
+        .pointer-marker {
+            position: absolute;
+            top: -28px;
+            left: 0;
+            right: 0;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 12px;
+            z-index: 10;
+            background: rgba(255,255,255,0.9);
+            border-radius: 3px;
+            padding: 1px 0;
+            border: 1px solid transparent;
+        }
+        .pointer-marker .arrow {
+            display: block;
+            font-size: 12px;
+            line-height: 10px;
+        }
+        .marker-l { color: #e67e22; border-color: #e67e22; }
+        .marker-r { color: #9b59b6; border-color: #9b59b6; }
+        .marker-mid { color: #2980b9; border-color: #3498db; background: #e1f5fe; }
+
+        .status-box {
+            background: #f8f9fa;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 100px;
+        }
+        .status-line {
+            margin: 8px 0;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .decision {
+            font-weight: bold;
+            color: #2c3e50;
+            background: #edf2f7;
+            padding: 6px 12px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .log-highlight {
+            font-family: monospace;
+            background: #edf2f7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        @keyframes pulse {
+            from { transform: scale(1); box-shadow: 0 0 0px rgba(46,204,113,0); }
+            to { transform: scale(1.03); box-shadow: 0 0 10px rgba(46,204,113,0.5); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>findPeak</h1>
+    
+    <div class="controls">
+        <button class="reset-btn" onclick="resetSimulation()">התחל מחדש</button>
+        <button style="background-color: #34495e;" onclick="generateNewArray()">מערך חדש</button>
+    </div>
+
+    <div class="array-container">
+        <div class="array-grid" id="arrayGrid"></div>
+    </div>
+
+    <div class="status-box">
+        <div id="variablesStatus">
+            <span class="status-line">לחץ על מקש <strong>Enter</strong> כדי להתחיל את החיפוש.</span>
+        </div>
+        <div id="decisionStatus"></div>
+    </div>
+</div>
+
+<script>
+    let arr = [];
+    let linearPeaks = []; 
+    let l = 0;
+    let r = 0;
+    let mid = 0;
+    let step = 0;
+    let isFinished = false;
+    let peakFoundInCurrentStep = false; 
+    let initialArr = [];
+
+    function runLinearSearch() {
+        linearPeaks = new Array(arr.length).fill(false);
+        for (let i = 0; i < arr.length; i++) {
+            let cond1 = (i === 0 || arr[i - 1] <= arr[i]);
+            let cond2 = (i === arr.length - 1 || arr[i + 1] <= arr[i]);
+            if (cond1 && cond2) {
+                linearPeaks[i] = true;
+            }
+        }
+    }
+
+    function generateNewArray() {
+        arr = [];
+        for (let i = 0; i < 100; i++) {
+            arr.push(Math.floor(Math.random() * 90) + 10);
+        }
+        initialArr = [...arr];
+        runLinearSearch(); 
+        initSimulationValues();
+        renderArray();
+        updateStatusInitial();
+    }
+
+    function initSimulationValues() {
+        l = 0;
+        r = arr.length - 1;
+        mid = 0;
+        step = 0;
+        isFinished = false;
+        peakFoundInCurrentStep = false;
+    }
+
+    function resetSimulation() {
+        arr = [...initialArr];
+        initSimulationValues();
+        renderArray();
+        updateStatusInitial();
+    }
+
+    function renderArray() {
+        const grid = document.getElementById('arrayGrid');
+        grid.innerHTML = '';
+
+        for (let i = 0; i < arr.length; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'array-cell';
+            cell.id = `cell-${i}`;
+            
+            cell.innerHTML = `
+                <span class="cell-value">${arr[i]}</span>
+                <span class="index-label">${i}</span>
+            `;
+
+            // הוספת קלאס לפסגה לינארית (גבול ומספר אדומים)
+            if (linearPeaks[i]) {
+                cell.classList.add('linear-peak');
+            }
+
+            // טווח חיפוש בינארי אקטיבי (רקע צהוב)
+            if (!isFinished && step > 0 && i >= l && i <= r) {
+                cell.classList.add('active-range');
+            }
+
+            // סימון משתני האלגוריתם והחצים
+            if (step > 0) {
+                let text = [];
+                let isL = (i === l);
+                let isR = (i === r);
+                let isMid = (i === mid);
+
+                if (isL) text.push('l');
+                if (isR) text.push('r');
+                if (isMid) text.push('mid');
+
+                if (isL || isR || isMid) {
+                    let markersContainer = document.createElement('div');
+                    markersContainer.className = 'pointer-marker';
+                    
+                    let markerClass = '';
+                    if (isMid) {
+                        markerClass = 'marker-mid';
+                        if (!isFinished) cell.classList.add('mid-cell');
+                    } else if (isL) {
+                        markerClass = 'marker-l';
+                    } else {
+                        markerClass = 'marker-r';
+                    }
+                    
+                    markersContainer.classList.add(markerClass);
+                    markersContainer.innerHTML = `${text.join(', ')}<span class="arrow">↓</span>`;
+                    cell.appendChild(markersContainer);
+                }
+            }
+
+            // נעילת הפסגה הסופית בירוק
+            if (isFinished && i === mid) {
+                cell.className = 'array-cell peak-cell'; // מנקה את שאר העיצובים לטובת הירוק
+            }
+
+            grid.appendChild(cell);
+        }
+    }
+
+    function updateStatusInitial() {
+        const peakCount = linearPeaks.filter(p => p).length;
+        document.getElementById('variablesStatus').innerHTML = `
+            <div class="status-line" style="color: #e74c3c;">🔍 <strong>חיפוש לינארי מקדים הסתיים:</strong> זוהו <span class="log-highlight">${peakCount}</span> נקודות פסגה במערך (מסגרת ומספר באדום).</div>
+            <div class="status-line">ערכים התחלתיים לחיפוש הבינארי: <span class="log-highlight">l = 0</span>, <span class="log-highlight">r = 99</span></div>
+            <div class="status-line">לחץ על מקש <strong>Enter</strong> כדי להתחיל את החיפוש הבינארי.</div>
+        `;
+        document.getElementById('decisionStatus').innerHTML = '';
+    }
+
+    function nextStep() {
+        if (peakFoundInCurrentStep) {
+            isFinished = true;
+            peakFoundInCurrentStep = false;
+            renderArray(); 
+            document.getElementById('decisionStatus').innerHTML = `
+                <div class="decision" style="background-color: #d4edda; color: #155724; border-right: 4px solid #2ecc71;">
+                    🎉 נמצאה פסגה! האיבר במקום ה-${mid} שערכו ${arr[mid]} גדול או שווה לשכניו. האלגוריתם מבצע break ומחזיר את האינדקס.
+                </div>
+            `;
+            return;
+        }
+
+        if (isFinished) return;
+
+        step++;
+
+        if (l <= r) {
+            mid = Math.floor((l + r) / 2);
+            renderArray(); 
+
+            let cond1 = (mid === 0 || arr[mid - 1] <= arr[mid]);
+            let cond2 = (mid === arr.length - 1 || arr[mid + 1] <= arr[mid]);
+
+            let statusHtml = `
+                <div class="status-line"><strong>צעד ${step}:</strong> חישוב נקודת האמצע: <span class="log-highlight">mid = (${l} + ${r}) / 2 = ${mid}</span></div>
+                <div class="status-line">ערך נוכחי: <span class="log-highlight">arr[mid] = ${arr[mid]}</span></div>
+                <div class="status-line">שכן משמאל: <span class="log-highlight">${mid > 0 ? 'arr['+(mid-1)+'] = ' + arr[mid-1] : 'אין (קצה מערך)'}</span> | 
+                                 שכן מימין: <span class="log-highlight">${mid < arr.length - 1 ? 'arr['+(mid+1)+'] = ' + arr[mid+1] : 'אין (קצה מערך)'}</span></div>
+            `;
+            document.getElementById('variablesStatus').innerHTML = statusHtml;
+
+            if (cond1 && cond2) {
+                peakFoundInCurrentStep = true;
+                document.getElementById('decisionStatus').innerHTML = `
+                    <div class="decision" style="background-color: #fff3cd; color: #856404; border-right: 4px solid #ffc107;">
+                        החלטה: נמצא שתנאי הפסגה מתקיים עבור mid! לחץ על Enter פעם נוספת כדי לאשר ולסיים את הריצה.
+                    </div>
+                `;
+                return;
+            }
+
+            if (mid > 0 && arr[mid - 1] > arr[mid]) {
+                document.getElementById('decisionStatus').innerHTML = `
+                    <div class="decision">
+                        החלטה: מכיוון שהשכן משמאל (${arr[mid-1]}) גדול מ-arr[mid] (${arr[mid]}), קיימת בוודאות פסגה בחצי השמאלי.<br>
+                        האלגוריתם מעדכן את הגבול הימני: <span class="log-highlight">r = mid - 1 = ${mid - 1}</span>
+                    </div>
+                `;
+                r = mid - 1;
+            } else {
+                document.getElementById('decisionStatus').innerHTML = `
+                    <div class="decision">
+                        החלטה: מכיוון שהתנאים הקודמים לא התקיימו, קיימת בוודאות פסגה בחצי הימני.<br>
+                        האלגוריתם מעדכן את הגבול השמאלי: <span class="log-highlight">l = mid + 1 = ${mid + 1}</span>
+                    </div>
+                `;
+                l = mid + 1;
+            }
+
+        } else {
+            isFinished = true;
+            document.getElementById('decisionStatus').innerHTML = `<div class="decision">החיפוש הסתיים ללא תוצאה (l > r).</div>`;
+        }
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            nextStep();
+        }
+    });
+
+    window.onload = generateNewArray;
+</script>
+
+</body>
+</html>

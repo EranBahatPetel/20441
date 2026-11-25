@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הדמיית אלגוריתם - findTriplet</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 20px;
+            padding: 10px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .controls {
+            margin-bottom: 25px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .btn-secondary {
+            background-color: #e67e22;
+        }
+        .btn-secondary:hover {
+            background-color: #d35400;
+        }
+        .keyboard-hint {
+            font-size: 14px;
+            color: #7f8c8d;
+            background: #e8f4f8;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border-right: 4px solid #3498db;
+        }
+        /* תצוגת מערך משמאל לימין */
+        .array-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            padding: 10px 0;
+            direction: ltr;
+        }
+        .array-cell {
+            border: 2px solid #bdc3c7;
+            background-color: #fff;
+            min-width: 45px;
+            height: 55px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            position: relative;
+            margin-right: -2px;
+            transition: all 0.2s;
+        }
+        .cell-idx {
+            font-size: 11px;
+            color: #7f8c8d;
+            margin-bottom: 2px;
+        }
+        .cell-val {
+            font-size: 16px;
+            direction: ltr;
+            unicode-bidi: bidi-override;
+        }
+        .current-scan {
+            background-color: #f1c40f !important;
+            border-color: #f39c12;
+            transform: scale(1.05);
+            z-index: 2;
+        }
+        /* פריסת הטבלאות זו לצד זו */
+        .tables-side-by-side {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .phase-section {
+            flex: 1;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            background: #fff;
+            transition: opacity 0.3s;
+        }
+        .tracking-table {
+            border-collapse: collapse;
+            margin: 15px 0 0 0;
+            width: 100%;
+            background: #fafafa;
+        }
+        .tracking-table th, .tracking-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .tracking-table th {
+            background-color: #34495e;
+            color: white;
+        }
+        .num-val, .idx-val {
+            direction: ltr;
+            unicode-bidi: bidi-override;
+        }
+        .highlight-change {
+            background-color: #2ecc71 !important;
+            color: white;
+        }
+        .status-box {
+            background-color: #ecf0f1;
+            border-right: 5px solid #34495e;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.5;
+            min-height: 50px;
+        }
+        .force-ltr {
+            direction: ltr;
+            display: inline-block;
+            unicode-bidi: embed;
+        }
+        .final-result {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 15px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .final-result ul {
+            margin: 10px 0;
+            padding-right: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>findTriplet</h1>
+    
+    <div class="controls">
+        <button id="btn-generate" onclick="generateNewArray()">צור מערך חדש</button>
+        <button id="btn-restart" class="btn-secondary" onclick="restartCurrentSimulation()">התחל מחדש (אותו מערך)</button>
+        <div class="keyboard-hint">⌨️ לחץ על <strong>Enter</strong> במקלדת כדי להתקדם צעד אחר צעד</div>
+    </div>
+
+    <h3>המערך הנבדק (אינדקס 0 משמאל):</h3>
+    <div class="array-container" id="main-array"></div>
+
+    <div class="status-box" id="status-message"></div>
+
+    <div class="tables-side-by-side" id="simulation-tables">
+        
+        <div class="phase-section" id="section-max">
+            <h3>שלב א': שלושת הגדולים</h3>
+            <p>מעבר למציאת ערכי המקסימום:</p>
+            <table class="tracking-table">
+                <thead>
+                    <tr>
+                        <th>תכונה</th>
+                        <th>אינדקס</th>
+                        <th>ערך</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="row-max1">
+                        <td>max_index1 (1)</td>
+                        <td class="idx-val">-</td>
+                        <td class="num-val">-</td>
+                    </tr>
+                    <tr id="row-max2">
+                        <td>max_index2 (2)</td>
+                        <td class="idx-val">-</td>
+                        <td class="num-val">-</td>
+                    </tr>
+                    <tr id="row-max3">
+                        <td>max_index3 (3)</td>
+                        <td class="idx-val">-</td>
+                        <td class="num-val">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="phase-section" id="section-min">
+            <h3>שלב ב': שני הקטנים</h3>
+            <p>מעבר למציאת ערכי המינימום:</p>
+            <table class="tracking-table">
+                <thead>
+                    <tr>
+                        <th>תכונה</th>
+                        <th>אינדקס</th>
+                        <th>ערך</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="row-min1">
+                        <td>min_index1 (1)</td>
+                        <td class="idx-val">-</td>
+                        <td class="num-val">-</td>
+                    </tr>
+                    <tr id="row-min2">
+                        <td>min_index2 (2)</td>
+                        <td class="idx-val">-</td>
+                        <td class="num-val">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="final-box" style="display:none;"></div>
+</div>
+
+<script>
+    let A = [];
+    const n = 20;
+    
+    let currentPhase = 'MAX'; 
+    let currentI = 1; 
+    
+    let max1 = 0, max2 = -1, max3 = -1;
+    let min1 = 0, min2 = -1;
+    let isFinished = false;
+
+    // הפעלה אוטומטית מיד עם טעינת הדף (DOMContentLoaded)
+    window.addEventListener('DOMContentLoaded', function() {
+        generateNewArray();
+    });
+
+    // האזנה למקש Enter להרצת הצעדים
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); 
+            if (!isFinished && A.length > 0) {
+                nextStep();
+            }
+        }
+    });
+
+    // הגרלת מערך חדש
+    function generateNewArray() {
+        A = [];
+        for (let i = 0; i < n; i++) {
+            let val = Math.floor(Math.random() * 101) - 50;
+            A.push(val);
+        }
+        renderArrayStructure();
+        resetAlgorithmState();
+    }
+
+    // אתחול מחדש על בסיס המערך הקיים
+    function restartCurrentSimulation() {
+        if (A.length === 0) {
+            document.getElementById('status-message').innerHTML = "אין מערך זמין.";
+            return;
+        }
+        resetAlgorithmState();
+    }
+
+    // רינדור ויזואלי של המערך ל-DOM
+    function renderArrayStructure() {
+        const container = document.getElementById('main-array');
+        container.innerHTML = '';
+        A.forEach((val, idx) => {
+            const cell = document.createElement('div');
+            cell.className = 'array-cell';
+            cell.id = `cell-${idx}`;
+            cell.innerHTML = `<span class="cell-idx">${idx}</span><span class="cell-val">${val}</span>`;
+            container.appendChild(cell);
+        });
+    }
+
+    // איפוס משתני הריצה הלוגיים
+    function resetAlgorithmState() {
+        currentPhase = 'MAX';
+        currentI = 1;
+        max1 = 0; max2 = -1; max3 = -1;
+        min1 = 0; min2 = -1;
+        isFinished = false;
+        
+        updateTableDisplay();
+        
+        document.getElementById('simulation-tables').style.display = 'flex';
+        document.getElementById('section-max').style.opacity = '1';
+        document.getElementById('section-min').style.opacity = '0.4';
+        document.getElementById('final-box').style.display = 'none';
+        
+        let initialVal = A[0];
+        document.getElementById('status-message').innerHTML = `האלגוריתם מוכן להרצה. מתחילים ב<strong>שלב א'</strong> (3 הגדולים).<br>הנחה ראשונית: אינדקס 0 (ערך: <span class="force-ltr">${initialVal}</span>) הוא הכי גדול והכי קטן כרגע. <strong>לחץ Enter להתחלת הסריקה מאינדקס 1.</strong>`;
+        
+        clearHighlights();
+        document.getElementById('cell-0').style.backgroundColor = '#e8f4f8';
+    }
+
+    function clearHighlights() {
+        for(let i=0; i<n; i++) {
+            const cell = document.getElementById(`cell-${i}`);
+            if(cell) {
+                cell.classList.remove('current-scan');
+                cell.style.backgroundColor = '';
+            }
+        }
+    }
+
+    function formatNum(num) {
+        return `<span class="force-ltr">${num}</span>`;
+    }
+
+    // ביצוע צעד אחד של האלגוריתם (מופעל ב-Enter)
+    function nextStep() {
+        clearHighlights();
+        
+        if (currentPhase === 'MAX') {
+            if (currentI < n) {
+                document.getElementById(`cell-${currentI}`).classList.add('current-scan');
+                
+                let val = A[currentI];
+                let msg = `בודק אינדקס ${currentI} (ערך: ${formatNum(val)}): `;
+                let changed = [];
+
+                if (val > A[max1]) {
+                    max3 = max2;
+                    max2 = max1;
+                    max1 = currentI;
+                    msg += `גדול מ-max1 (${formatNum(A[max2] !== undefined ? A[max2] : '-')}). הערכים הוסטו מטה.`;
+                    changed = ['max1', 'max2', 'max3'];
+                } else if (max2 === -1 || val > A[max2]) {
+                    max3 = max2;
+                    max2 = currentI;
+                    msg += `גדול מ-max2. עודכן כ-max2 והערך הקודם נדחף ל-max3.`;
+                    changed = ['max2', 'max3'];
+                } else if (max3 === -1 || val > A[max3]) {
+                    max3 = currentI;
+                    msg += `גדול מ-max3. מעדכן את max3.`;
+                    changed = ['max3'];
+                } else {
+                    msg += `אינו גדול מאף אחד משלושת המקסימומים הנוכחיים.`;
+                }
+
+                document.getElementById('status-message').innerHTML = msg;
+                updateTableDisplay(changed);
+                currentI++;
+            } else {
+                currentPhase = 'MIN';
+                currentI = 1; 
+                document.getElementById('section-max').style.opacity = '0.4';
+                document.getElementById('section-min').style.opacity = '1';
+                document.getElementById('status-message').innerHTML = `הסתיים שלב א'. עוברים ל<strong>שלב ב'</strong>: מציאת שני המספרים הקטנים ביותר.<br>נסרוק מחדש את המערך מאינדקס 1. <strong>לחץ Enter להמשך.</strong>`;
+            }
+        } 
+        else if (currentPhase === 'MIN') {
+            if (currentI < n) {
+                document.getElementById(`cell-${currentI}`).classList.add('current-scan');
+                
+                let val = A[currentI];
+                let msg = `בודק אינדקס ${currentI} (ערך: ${formatNum(val)}) למינימום: `;
+                let changed = [];
+
+                if (val < A[min1]) {
+                    min2 = min1;
+                    min1 = currentI;
+                    msg += `קטן מ-min1. הערכים הוסטו מטה.`;
+                    changed = ['min1', 'min2'];
+                } else if (min2 === -1 || val < A[min2]) {
+                    min2 = currentI;
+                    msg += `קטן מ-min2. מעדכן את min2.`;
+                    changed = ['min2'];
+                } else {
+                    msg += `אינו קטן מהמינימומים הנוכחיים.`;
+                }
+
+                document.getElementById('status-message').innerHTML = msg;
+                updateTableDisplay(changed);
+                currentI++;
+            } else {
+                currentPhase = 'FINAL';
+                calculateFinalResult();
+            }
+        }
+    }
+
+    // עדכון תאי הטבלה והדגשת השורות שהשתנו
+    function updateTableDisplay(changedFields = []) {
+        const rows = {
+            'max1': { id: 'row-max1', idx: max1, val: A[max1] },
+            'max2': { id: 'row-max2', idx: max2, val: max2 !== -1 ? A[max2] : '-' },
+            'max3': { id: 'row-max3', idx: max3, val: max3 !== -1 ? A[max3] : '-' },
+            'min1': { id: 'row-min1', idx: min1, val: A[min1] },
+            'min2': { id: 'row-min2', idx: min2, val: min2 !== -1 ? A[min2] : '-' }
+        };
+
+        for (let key in rows) {
+            let rowEl = document.getElementById(rows[key].id);
+            rowEl.querySelector('.idx-val').innerText = rows[key].idx;
+            rowEl.querySelector('.num-val').innerText = rows[key].val;
+            
+            if (changedFields.includes(key)) {
+                rowEl.classList.add('highlight-change');
+                setTimeout(() => {
+                    rowEl.classList.remove('highlight-change');
+                }, 400);
+            }
+        }
+    }
+
+    // סיום החישוב והצגת השוואת המכפלות
+    function calculateFinalResult() {
+        isFinished = true;
+        clearHighlights();
+
+        let prod1 = A[max1] * A[max2] * A[max3];
+        let prod2 = A[min1] * A[min2] * A[max1]; 
+        
+        let isOption1Better = prod1 > prod2;
+        let finalProduct = isOption1Better ? prod1 : prod2;
+        
+        let finalBox = document.getElementById('final-box');
+        finalBox.style.display = 'block';
+        
+        let htmlResult = `<h3>🏁 חישוב תוצאה סופית והשוואה:</h3>`;
+        htmlResult += `<ul>`;
+        htmlResult += `<li><strong>אפשרות 1 (מכפלת 3 הגדולים):</strong> ${formatNum(A[max1])} × ${formatNum(A[max2])} × ${formatNum(A[max3])} = ${formatNum(prod1)}</li>`;
+        htmlResult += `<li><strong>אפשרות 2 (2 הקטנים × הכי גדול):</strong> ${formatNum(A[min1])} × ${formatNum(A[min2])} × ${formatNum(A[max1])} = ${formatNum(prod2)}</li>`;
+        htmlResult += `</ul>`;
+        
+        if (isOption1Better) {
+            htmlResult += `<p><strong>הנבחרת היא אפשרות 1!</strong> השלשה היא: (${formatNum(A[max1])}, ${formatNum(A[max2])}, ${formatNum(A[max3])}) ומכפלתה המקסימלית היא ${formatNum(finalProduct)}.</p>`;
+        } else {
+            htmlResult += `<p><strong>הנבחרת היא אפשרות 2!</strong> השלשה היא: (${formatNum(A[min1])}, ${formatNum(A[min2])}, ${formatNum(A[max1])}) ומכפלתה המקסימלית היא ${formatNum(finalProduct)}.</p>`;
+        }
+        
+        finalBox.innerHTML = htmlResult;
+        document.getElementById('status-message').innerHTML = `הריצה הסתיימה! התוצאה הסופית והמכפלה המנצחת מוצגות למטה באזור הירוק.`;
+    }
+</script>
+
+</body>
+</html>
