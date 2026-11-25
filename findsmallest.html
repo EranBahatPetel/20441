@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>סימולטור אלגוריתם findSmallest</title>
+    <!-- טעינת Tailwind CSS לעיצוב מודרני ורספונסיבי -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- טעינת גופן Heebo ו-Fira Code להצגת קוד וטקסט בעברית בצורה ברורה -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Heebo', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Heebo', sans-serif;
+            background-color: #f8fafc;
+        }
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        /* אנימציה עדינה לתא הפעיל */
+        @keyframes pulseBorder {
+            0%, 100% { transform: translateY(-2px); box-shadow: 0 6px 16px -2px rgba(59, 130, 246, 0.35); }
+            50% { transform: translateY(-4px); box-shadow: 0 10px 20px -2px rgba(59, 130, 246, 0.5); }
+        }
+        .active-cell {
+            animation: pulseBorder 1.8s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+    <!-- כותרת עליונה -->
+    <header class="bg-slate-900 text-white py-4 px-6 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                    <span class="bg-blue-600 text-white px-2.5 py-0.5 rounded-lg text-lg font-mono">O(n)</span>
+                    סימולטור הרצה: <span class="font-mono text-blue-400" dir="ltr">findSmallest(int[] arr)</span>
+                </h1>
+                <p class="text-slate-300 text-sm mt-1">
+                    מציאת המספר השלם החיובי הקטן ביותר שלא ניתן להציג כסכום של תת-קבוצה מתוך מערך ממוין
+                </p>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-700 text-xs sm:text-sm text-slate-200">
+                <kbd class="px-2 py-1 bg-slate-700 text-amber-300 font-mono rounded border border-slate-600 shadow-sm">Enter ↵</kbd>
+                <span>להתקדמות צעד קדימה</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- תוכן מרכזי -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+        <!-- סרגל בקרה וכפתורים -->
+        <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-2.5">
+                <button id="btn-next" type="button"
+                    class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-2.5 px-5 rounded-xl shadow-sm transition-all cursor-pointer">
+                    <span>צעד קדימה</span>
+                    <span class="text-xs bg-blue-500/80 px-1.5 py-0.5 rounded font-mono">Enter</span>
+                </button>
+
+                <button id="btn-prev" type="button"
+                    class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-40 disabled:cursor-not-allowed text-slate-800 font-semibold py-2.5 px-4 rounded-xl border border-slate-300 transition-all cursor-pointer">
+                    <span>צעד אחורה</span>
+                </button>
+
+                <button id="btn-reset" type="button"
+                    class="flex items-center gap-2 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed text-amber-900 font-semibold py-2.5 px-4 rounded-xl border border-amber-300 transition-all cursor-pointer">
+                    <span>איתחול הרצה</span>
+                </button>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span id="step-counter" class="text-sm font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                    צעד 0
+                </span>
+                <button id="btn-toggle-code" type="button"
+                    class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white font-semibold py-2.5 px-4 rounded-xl shadow-sm transition-all cursor-pointer">
+                    <span id="btn-toggle-code-text">הצג קוד</span>
+                </button>
+                <button id="btn-new-array" type="button"
+                    class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all cursor-pointer">
+                    <span>הגרל מערך חדש (20 איברים)</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- תצוגת המערך (20 תאים משמאל לימין) -->
+        <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <span>המערך הממוין</span>
+                    <span class="text-xs font-normal text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">אורך: 20 | עצירה מובטחת מאינדקס 10 ומעלה</span>
+                </h2>
+                <!-- מקרא צבעים -->
+                <div class="flex flex-wrap items-center gap-3 text-xs font-medium">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-100 border border-emerald-500 inline-block"></span> נסרק ונכלל ב-sum</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-blue-100 border-2 border-blue-600 inline-block"></span> איבר נבדק כעת (arr[i])</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-rose-100 border-2 border-rose-600 inline-block"></span> פער גדול מ-1 (נקודת עצירה)</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-slate-50 border border-slate-300 inline-block"></span> טרם נסרק</span>
+                </div>
+            </div>
+
+            <!-- רשת 20 איברים בכיוון משמאל לימין (LTR) כמקובל במדעי המחשב -->
+            <div dir="ltr" id="array-container" class="grid grid-cols-5 sm:grid-cols-10 lg:grid-cols-20 gap-1.5 pt-6 pb-2">
+                <!-- התאים ייווצרו דינמית ע"י JavaScript -->
+            </div>
+        </section>
+
+        <!-- אזור מידע חי + קוד המקור -->
+        <div id="workspace-grid" class="grid grid-cols-1 gap-6 items-start">
+
+            <!-- לוח בקרה חי: סכום, השוואה והסבר -->
+            <div id="info-panel" class="space-y-5">
+                
+                <!-- כרטיסי נתונים מרכזיים -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- הסכום עד הנה -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-emerald-200 bg-gradient-to-b from-emerald-50/60 to-white">
+                        <div class="text-xs font-bold text-emerald-700 uppercase tracking-wide">הסכום עד הנה (sum)</div>
+                        <div id="stat-sum" class="text-3xl font-extrabold text-emerald-900 font-mono mt-1">—</div>
+                        <div id="stat-range" class="text-xs text-emerald-700 mt-1.5 font-medium">
+                            טווח אפשרי: —
+                        </div>
+                    </div>
+
+                    <!-- האיבר הבא / הנוכחי -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-blue-200 bg-gradient-to-b from-blue-50/60 to-white">
+                        <div class="text-xs font-bold text-blue-700 uppercase tracking-wide">האיבר הנבדק (arr[i])</div>
+                        <div id="stat-current" class="text-3xl font-extrabold text-blue-900 font-mono mt-1">—</div>
+                        <div id="stat-index" class="text-xs text-blue-700 mt-1.5 font-medium">
+                            אינדקס i: —
+                        </div>
+                    </div>
+
+                    <!-- תוצאה / סטטוס -->
+                    <div id="result-card" class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wide">תוצאת האלגוריתם</div>
+                        <div id="stat-result" class="text-3xl font-extrabold text-slate-800 font-mono mt-1">בתהליך...</div>
+                        <div id="stat-result-sub" class="text-xs text-slate-500 mt-1.5 font-medium">
+                            ממתין לסיום הסריקה
+                        </div>
+                    </div>
+                </div>
+
+                <!-- פאנל ההשוואה החיה -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-bold text-slate-800">השוואה נוכחית: האם נוצר "חור" בסכומים?</h3>
+                        <span id="condition-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                            אתחול
+                        </span>
+                    </div>
+
+                    <!-- תיבת נוסחת ההשוואה -->
+                    <div id="comparison-box" class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-around gap-4 text-center">
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">האיבר הבא (<span class="font-mono">arr[i]</span>)</div>
+                            <div id="cmp-arr-val" class="text-2xl font-bold font-mono text-blue-700">—</div>
+                        </div>
+                        <div class="text-xl font-bold text-slate-400">−</div>
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">הסכום עד הנה (<span class="font-mono">sum</span>)</div>
+                            <div id="cmp-sum-val" class="text-2xl font-bold font-mono text-emerald-700">—</div>
+                        </div>
+                        <div class="text-xl font-bold text-slate-400">=</div>
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">ההפרש (<span class="font-mono">arr[i] - sum</span>)</div>
+                            <div id="cmp-diff-val" class="text-2xl font-bold font-mono text-slate-800">—</div>
+                        </div>
+                        <div class="h-10 w-px bg-slate-200 hidden sm:block"></div>
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">תנאי העצירה</div>
+                            <div id="cmp-rule" class="text-base font-bold font-mono text-slate-700" dir="ltr">arr[i] - sum &gt; 1</div>
+                        </div>
+                    </div>
+
+                    <!-- הסבר מילולי מפורט לצעד הנוכחי -->
+                    <div id="step-explanation" class="bg-blue-50/70 border-r-4 border-blue-500 p-4 rounded-l-xl text-slate-800 text-sm sm:text-base leading-relaxed">
+                        טוען נתונים...
+                    </div>
+                </div>
+            </div>
+
+            <!-- פאנל קוד המקור ב-Java (מוסתר כברירת מחדל) -->
+            <div id="code-panel" class="hidden lg:col-span-5 bg-slate-900 text-slate-100 rounded-2xl shadow-md overflow-hidden border border-slate-800">
+                <div class="bg-slate-800/90 px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+                    <span class="text-xs font-mono text-slate-300 font-semibold">FindSmallest.java</span>
+                    <span class="text-xs text-slate-400">מעקב שורת ביצוע</span>
+                </div>
+                <div dir="ltr" class="p-3 overflow-x-auto text-xs sm:text-sm code-font leading-6 select-none whitespace-pre"><div id="line-1" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">1</span> <span class="text-purple-400">public static int</span> <span class="text-blue-300">findSmallest</span>(<span class="text-purple-400">int</span>[] arr)</div><div id="line-2" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">2</span> {</div><div id="line-3" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">3</span>     <span class="text-purple-400">if</span> (arr.length == <span class="text-amber-300">0</span> || arr[<span class="text-amber-300">0</span>] &gt; <span class="text-amber-300">1</span>)</div><div id="line-4" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">4</span>         <span class="text-purple-400">return</span> <span class="text-amber-300">1</span>;</div><div id="line-5" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">5</span> </div><div id="line-6" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">6</span>     <span class="text-purple-400">int</span> i, sum;</div><div id="line-7" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">7</span>     <span class="text-purple-400">for</span> (i = <span class="text-amber-300">1</span>, sum = arr[<span class="text-amber-300">0</span>]; i &lt; arr.length; i++)</div><div id="line-8" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">8</span>     {</div><div id="line-9" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">9</span>         <span class="text-purple-400">if</span> (arr[i] - sum &gt; <span class="text-amber-300">1</span>)</div><div id="line-10" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">10</span>            <span class="text-purple-400">return</span> sum + <span class="text-amber-300">1</span>;</div><div id="line-11" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">11</span>        sum += arr[i];</div><div id="line-12" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">12</span>    }</div><div id="line-13" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">13</span>    <span class="text-purple-400">return</span> sum + <span class="text-amber-300">1</span>;</div><div id="line-14" class="code-line px-2 py-0.5 rounded transition-colors"><span class="text-slate-500 inline-block w-6">14</span> }</div></div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        /**
+         * מחולל מערך ממוין בן 20 מספרים שלמים חיוביים.
+         * מבטיח שהאלגוריתם לא יעצור לפני אינדקס 10 (לפחות אמצע המערך).
+         */
+        function generateValidArray() {
+            const length = 20;
+            const arr = new Array(length);
+            
+            // האיבר הראשון חייב להיות 1 כדי לא לעצור באינדקס 0
+            arr[0] = 1;
+            let runningSum = 1;
+
+            // בוחרים אינדקס עצירה אקראי בין 10 ל-20 (20 אומר שאין עצירה מוקדמת כלל)
+            const stopIndex = Math.floor(Math.random() * 11) + 10; // 10..20
+
+            // מילוי האיברים מאינדקס 1 עד stopIndex - 1 כך שתמיד מתקיים arr[i] <= runningSum + 1
+            for (let i = 1; i < stopIndex; i++) {
+                const minVal = arr[i - 1];
+                const maxVal = runningSum + 1;
+                
+                // מגבילים מעט את הקפיצה המקסימלית כדי שהמספרים יישארו קריאים ונוחים למעקב ויזואלי,
+                // אך עדיין מאפשרים קפיצות מגוונות עד maxVal
+                const maxStep = Math.min(maxVal - minVal, Math.max(3, Math.floor(runningSum * 0.45)));
+                const nextVal = minVal + Math.floor(Math.random() * (maxStep + 1));
+                
+                arr[i] = nextVal;
+                runningSum += nextVal;
+            }
+
+            // אם נבחר אינדקס עצירה בתוך המערך (10..19), יוצרים בו פער: arr[stopIndex] > runningSum + 1
+            if (stopIndex < length) {
+                const gap = Math.floor(Math.random() * 6) + 2; // הפרש של 2 עד 7 מעל sum
+                arr[stopIndex] = runningSum + gap;
+
+                // השלמת שאר המערך בסדר לא יורד
+                for (let i = stopIndex + 1; i < length; i++) {
+                    arr[i] = arr[i - 1] + Math.floor(Math.random() * 8);
+                }
+            }
+
+            return arr;
+        }
+
+        /**
+         * בניית כל שלבי הריצה מראש עבור מערך נתון.
+         * מאפשרת ניווט מיידי ומדויק קדימה ואחורה.
+         */
+        function buildExecutionTrace(arr) {
+            const steps = [];
+
+            // שלב 0: התחלה ובדיקת תנאי קצה
+            steps.push({
+                phase: 'init-check',
+                activeLine: 3,
+                i: null,
+                sum: null,
+                includedUpTo: -1,
+                gapIndex: -1,
+                finished: false,
+                result: null,
+                badgeText: 'בדיקת תנאי פתיחה',
+                badgeClass: 'bg-slate-200 text-slate-800',
+                explanation: `מתחילים את הריצה: בודקים האם המערך ריק (arr.length == 0) או שהאיבר הראשון גדול מ-1 (arr[0] = ${arr[0]} > 1). מכיוון ש-arr[0] שווה ל-1, התנאי אינו מתקיים וממשיכים.`
+            });
+
+            // שלב 1: אתחול הלולאה (i = 1, sum = arr[0])
+            let sum = arr[0];
+            steps.push({
+                phase: 'loop-init',
+                activeLine: 7,
+                i: 1,
+                sum: sum,
+                includedUpTo: 0,
+                gapIndex: -1,
+                finished: false,
+                result: null,
+                badgeText: 'אתחול הלולאה',
+                badgeClass: 'bg-blue-100 text-blue-800',
+                explanation: `מאתחלים את sum לערך האיבר הראשון: sum = arr[0] = ${sum}, ומציבים i = 1. כעת אנו יודעים להרכיב בוודאות את כל המספרים בטווח [1 .. ${sum}]. נבדוק כעת את האיבר הבא arr[1] = ${arr[1]}.`
+            });
+
+            // מעבר על הלולאה
+            for (let i = 1; i < arr.length; i++) {
+                const currentVal = arr[i];
+                const diff = currentVal - sum;
+                const isGap = diff > 1;
+
+                // שלב בדיקת התנאי if (arr[i] - sum > 1)
+                steps.push({
+                    phase: 'compare',
+                    activeLine: 9,
+                    i: i,
+                    sum: sum,
+                    includedUpTo: i - 1,
+                    gapIndex: isGap ? i : -1,
+                    finished: false,
+                    result: null,
+                    badgeText: isGap ? 'התנאי מתקיים! (פער > 1)' : 'התנאי לא מתקיים (הפרש ≤ 1)',
+                    badgeClass: isGap ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800',
+                    explanation: isGap
+                        ? `בודקים עבור i = ${i}: האם arr[${i}] - sum > 1? מתקבל ${currentVal} - ${sum} = ${diff} (גדול מ-1!). נוצר "חור": לא ניתן להרכיב את המספר ${sum + 1} מהאיברים הקודמים (שסכומם ${sum}), וכל האיברים מכאן והלאה גדולים או שווים ל-${currentVal}.`
+                        : `בודקים עבור i = ${i}: האם arr[${i}] - sum > 1? מתקבל ${currentVal} - ${sum} = ${diff} (קטן או שווה ל-1). לכן אין פער, וניתן לצרף את arr[${i}] = ${currentVal} לסכום.`
+                });
+
+                if (isGap) {
+                    // שלב החזרת התשובה מתוך הלולאה
+                    steps.push({
+                        phase: 'return-gap',
+                        activeLine: 10,
+                        i: i,
+                        sum: sum,
+                        includedUpTo: i - 1,
+                        gapIndex: i,
+                        finished: true,
+                        result: sum + 1,
+                        badgeText: 'עצירה והחזרת תשובה',
+                        badgeClass: 'bg-rose-600 text-white',
+                        explanation: `האלגוריתם עוצר ומחזיר sum + 1 = ${sum} + 1 = ${sum + 1}. זהו המספר החיובי הקטן ביותר שלא ניתן להרכיב מסכום תת-קבוצה במערך.`
+                    });
+                    return steps;
+                }
+
+                // שלב עדכון הסכום sum += arr[i]
+                const prevSum = sum;
+                sum += currentVal;
+                const nextIdx = i + 1;
+                const nextInfo = nextIdx < arr.length
+                    ? `נקדם את i ל-${nextIdx} ונשווה מול arr[${nextIdx}] = ${arr[nextIdx]}.`
+                    : `סיימנו לסרוק את כל 20 איברי המערך (i הגיע ל-20).`;
+
+                steps.push({
+                    phase: 'update-sum',
+                    activeLine: 11,
+                    i: nextIdx < arr.length ? nextIdx : null,
+                    sum: sum,
+                    includedUpTo: i,
+                    gapIndex: -1,
+                    finished: false,
+                    result: null,
+                    badgeText: 'הרחבת טווח הסכומים',
+                    badgeClass: 'bg-emerald-100 text-emerald-800',
+                    explanation: `מעדכנים: sum = ${prevSum} + ${currentVal} = ${sum}. כעת ניתן להרכיב כל מספר שלם בטווח החדש [1 .. ${sum}]. ${nextInfo}`
+                });
+            }
+
+            // אם הלולאה הסתיימה ללא עצירה מוקדמת
+            steps.push({
+                phase: 'return-end',
+                activeLine: 13,
+                i: null,
+                sum: sum,
+                includedUpTo: arr.length - 1,
+                gapIndex: -1,
+                finished: true,
+                result: sum + 1,
+                badgeText: 'סיום המערך והחזרת תשובה',
+                badgeClass: 'bg-emerald-600 text-white',
+                explanation: `הלולאה הסתיימה בהצלחה עבור כל איברי המערך! ניתן להרכיב כל מספר בטווח [1 .. ${sum}], ולכן האלגוריתם מחזיר sum + 1 = ${sum + 1}.`
+            });
+
+            return steps;
+        }
+
+        // משתני מצב גלובליים של הסימולטור
+        let currentArray = [];
+        let executionTrace = [];
+        let currentStepIndex = 0;
+        let isCodeVisible = false;
+
+        // הפניות לאלמנטים ב-DOM
+        const arrayContainer = document.getElementById('array-container');
+        const btnNext = document.getElementById('btn-next');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnReset = document.getElementById('btn-reset');
+        const btnNewArray = document.getElementById('btn-new-array');
+        const btnToggleCode = document.getElementById('btn-toggle-code');
+        const btnToggleCodeText = document.getElementById('btn-toggle-code-text');
+        const stepCounter = document.getElementById('step-counter');
+
+        const workspaceGrid = document.getElementById('workspace-grid');
+        const infoPanel = document.getElementById('info-panel');
+        const codePanel = document.getElementById('code-panel');
+
+        const statSum = document.getElementById('stat-sum');
+        const statRange = document.getElementById('stat-range');
+        const statCurrent = document.getElementById('stat-current');
+        const statIndex = document.getElementById('stat-index');
+        const statResult = document.getElementById('stat-result');
+        const statResultSub = document.getElementById('stat-result-sub');
+        const resultCard = document.getElementById('result-card');
+
+        const conditionBadge = document.getElementById('condition-badge');
+        const cmpArrVal = document.getElementById('cmp-arr-val');
+        const cmpSumVal = document.getElementById('cmp-sum-val');
+        const cmpDiffVal = document.getElementById('cmp-diff-val');
+        const cmpRule = document.getElementById('cmp-rule');
+        const stepExplanation = document.getElementById('step-explanation');
+
+        /**
+         * רינדור תצוגת המערך והמצב הנוכחי על המסך
+         */
+        function render() {
+            const step = executionTrace[currentStepIndex];
+
+            // עדכון מונה צעדים וכפתורים
+            stepCounter.textContent = `צעד ${currentStepIndex} מתוך ${executionTrace.length - 1}`;
+            btnPrev.disabled = currentStepIndex === 0;
+            btnReset.disabled = currentStepIndex === 0;
+            btnNext.disabled = currentStepIndex === executionTrace.length - 1;
+
+            // הדגשת שורת הקוד הפעילה
+            document.querySelectorAll('.code-line').forEach(el => {
+                el.classList.remove('bg-blue-600/35', 'border-l-4', 'border-blue-400', 'font-semibold');
+            });
+            const activeLineEl = document.getElementById(`line-${step.activeLine}`);
+            if (activeLineEl) {
+                activeLineEl.classList.add('bg-blue-600/35', 'border-l-4', 'border-blue-400', 'font-semibold');
+            }
+
+            // בניית תאי המערך (0 עד 19 משמאל לימין)
+            arrayContainer.innerHTML = '';
+            currentArray.forEach((val, idx) => {
+                const cellWrapper = document.createElement('div');
+                cellWrapper.className = 'flex flex-col items-center relative';
+
+                // תגית מצביע מעל התא הפעיל
+                const pointerBadge = document.createElement('div');
+                pointerBadge.className = 'h-5 flex items-center justify-center text-[11px] font-mono font-bold mb-0.5';
+                if (step.i === idx) {
+                    pointerBadge.innerHTML = `<span class="px-1.5 py-0.2 rounded bg-blue-600 text-white shadow-sm">i=${idx}</span>`;
+                } else {
+                    pointerBadge.innerHTML = `<span class="text-slate-400">${idx}</span>`;
+                }
+
+                // תא הערך עצמו
+                const cellBox = document.createElement('div');
+                let boxClasses = 'w-full py-2.5 px-1 rounded-xl border text-center font-mono font-bold text-sm sm:text-base transition-all duration-200 ';
+
+                if (step.gapIndex === idx) {
+                    // איבר שגרם לעצירה (פער > 1)
+                    boxClasses += 'bg-rose-100 border-2 border-rose-600 text-rose-900 active-cell';
+                } else if (step.i === idx) {
+                    // האיבר הנבדק כעת
+                    boxClasses += 'bg-blue-100 border-2 border-blue-600 text-blue-900 active-cell';
+                } else if (idx <= step.includedUpTo) {
+                    // איבר שכבר נכלל בתוך sum
+                    boxClasses += 'bg-emerald-100/90 border-emerald-500 text-emerald-900';
+                } else {
+                    // איבר עתידי שטרם נסרק
+                    boxClasses += 'bg-slate-50 border-slate-300 text-slate-600';
+                }
+
+                cellBox.className = boxClasses;
+                cellBox.textContent = val;
+
+                cellWrapper.appendChild(pointerBadge);
+                cellWrapper.appendChild(cellBox);
+                arrayContainer.appendChild(cellWrapper);
+            });
+
+            // עדכון כרטיסי הנתונים
+            if (step.sum !== null) {
+                statSum.textContent = step.sum;
+                statRange.textContent = `טווח ניתן להרכבה: [1 .. ${step.sum}]`;
+            } else {
+                statSum.textContent = 'טרם אותחל';
+                statRange.textContent = 'טווח אפשרי: —';
+            }
+
+            if (step.i !== null && step.i < currentArray.length) {
+                statCurrent.textContent = currentArray[step.i];
+                statIndex.textContent = `אינדקס i = ${step.i}`;
+            } else {
+                statCurrent.textContent = '—';
+                statIndex.textContent = step.finished ? 'הסריקה הסתיימה' : 'ממתין לאתחול';
+            }
+
+            // עדכון כרטיס תוצאה
+            if (step.finished) {
+                statResult.textContent = step.result;
+                statResult.className = 'text-3xl font-extrabold text-rose-700 font-mono mt-1';
+                statResultSub.textContent = `המספר הקטן ביותר שחסר: ${step.result}`;
+                resultCard.className = 'bg-rose-50/70 p-4 rounded-2xl shadow-sm border-2 border-rose-400';
+            } else {
+                statResult.textContent = 'בתהליך...';
+                statResult.className = 'text-2xl font-bold text-slate-400 mt-1.5';
+                statResultSub.textContent = 'האלגוריתם עדיין סורק';
+                resultCard.className = 'bg-white p-4 rounded-2xl shadow-sm border border-slate-200';
+            }
+
+            // עדכון פאנל ההשוואה החיה
+            conditionBadge.textContent = step.badgeText;
+            conditionBadge.className = `px-3 py-1 rounded-full text-xs font-bold ${step.badgeClass}`;
+
+            if (step.sum !== null && step.i !== null && step.i < currentArray.length) {
+                const arrVal = currentArray[step.i];
+                const diff = arrVal - step.sum;
+                cmpArrVal.textContent = arrVal;
+                cmpSumVal.textContent = step.sum;
+                cmpDiffVal.textContent = diff;
+
+                if (diff > 1) {
+                    cmpDiffVal.className = 'text-2xl font-bold font-mono text-rose-600';
+                    cmpRule.innerHTML = `<span class="text-rose-600">${diff} &gt; 1 (אמת - עצירה!)</span>`;
+                } else {
+                    cmpDiffVal.className = 'text-2xl font-bold font-mono text-emerald-600';
+                    cmpRule.innerHTML = `<span class="text-emerald-600">${diff} &le; 1 (שקר - ממשיכים)</span>`;
+                }
+            } else {
+                cmpArrVal.textContent = '—';
+                cmpSumVal.textContent = step.sum !== null ? step.sum : '—';
+                cmpDiffVal.textContent = '—';
+                cmpDiffVal.className = 'text-2xl font-bold font-mono text-slate-400';
+                cmpRule.textContent = 'arr[i] - sum > 1';
+            }
+
+            // עדכון ההסבר המילולי
+            stepExplanation.textContent = step.explanation;
+            if (step.finished) {
+                stepExplanation.className = 'bg-rose-50 border-r-4 border-rose-500 p-4 rounded-l-xl text-slate-900 font-medium text-sm sm:text-base leading-relaxed';
+            } else if (step.phase === 'update-sum') {
+                stepExplanation.className = 'bg-emerald-50/80 border-r-4 border-emerald-500 p-4 rounded-l-xl text-slate-800 text-sm sm:text-base leading-relaxed';
+            } else {
+                stepExplanation.className = 'bg-blue-50/70 border-r-4 border-blue-500 p-4 rounded-l-xl text-slate-800 text-sm sm:text-base leading-relaxed';
+            }
+        }
+
+        // פעולות ניווט
+        function stepForward() {
+            if (currentStepIndex < executionTrace.length - 1) {
+                currentStepIndex++;
+                render();
+            }
+        }
+
+        function stepBackward() {
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                render();
+            }
+        }
+
+        function resetCurrentRun() {
+            currentStepIndex = 0;
+            render();
+        }
+
+        function initNewSimulation() {
+            currentArray = generateValidArray();
+            executionTrace = buildExecutionTrace(currentArray);
+            currentStepIndex = 0;
+            render();
+        }
+
+        function toggleCodeVisibility() {
+            isCodeVisible = !isCodeVisible;
+            if (isCodeVisible) {
+                codePanel.classList.remove('hidden');
+                workspaceGrid.classList.add('lg:grid-cols-12');
+                infoPanel.classList.add('lg:col-span-7');
+                btnToggleCodeText.textContent = 'הסתר קוד';
+            } else {
+                codePanel.classList.add('hidden');
+                workspaceGrid.classList.remove('lg:grid-cols-12');
+                infoPanel.classList.remove('lg:col-span-7');
+                btnToggleCodeText.textContent = 'הצג קוד';
+            }
+        }
+
+        // חיבור מאזינים לכפתורים
+        btnNext.addEventListener('click', () => {
+            btnNext.blur(); // הסרת פוקוס כדי שלחיצת Enter לא תפעיל גם את הכפתור וגם את מאזין המקלדת
+            stepForward();
+        });
+
+        btnPrev.addEventListener('click', () => {
+            btnPrev.blur();
+            stepBackward();
+        });
+
+        btnReset.addEventListener('click', () => {
+            btnReset.blur();
+            resetCurrentRun();
+        });
+
+        btnNewArray.addEventListener('click', () => {
+            btnNewArray.blur();
+            initNewSimulation();
+        });
+
+        btnToggleCode.addEventListener('click', () => {
+            btnToggleCode.blur();
+            toggleCodeVisibility();
+        });
+
+        // מאזין מקלדת גלובלי: לחיצה על Enter מקדמת צעד אחד קדימה
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                // מניעת לחיצה כפולה אם כפתור כלשהו בפוקוס
+                if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+                    event.preventDefault();
+                }
+                stepForward();
+            } else if (event.key === 'ArrowLeft') {
+                // אופציונלי: חץ שמאלה לצעד אחורה
+                stepBackward();
+            }
+        });
+
+        // הפעלה ראשונית בטעינת הדף
+        window.addEventListener('DOMContentLoaded', initNewSimulation);
+    </script>
+</body>
+</html>
