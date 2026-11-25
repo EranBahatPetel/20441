@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>סימולציית Two Pointers - מציאת זוגות בהפרש K</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #27ae60;
+        }
+        button.reset-btn {
+            background-color: #e67e22;
+        }
+        button.reset-btn:hover {
+            background-color: #d35400;
+        }
+        .status-box {
+            background-color: #fff;
+            border: 1px solid #dcdde1;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            max-width: 95%;
+            width: 1250px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .math-expr {
+            direction: ltr;
+            unicode-bidi: isolate;
+            display: inline-block;
+            font-family: monospace;
+            font-size: 16px;
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        /* אזור הסימולציה */
+        .visualization-container {
+            position: relative;
+            margin-top: 60px; 
+            margin-bottom: 25px; 
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        .array-wrapper {
+            display: flex;
+            flex-direction: row;
+            direction: ltr; 
+            position: relative;
+            padding: 0;
+        }
+        .array-cell {
+            width: 55px;
+            height: 50px;
+            border: 2px solid #34495e;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 15px;
+            font-weight: bold;
+            position: relative;
+            margin: 0 3px; 
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            direction: ltr; /* מבטיח שהמינוס בתוך התא תמיד משמאל */
+        }
+        .cell-index {
+            position: absolute;
+            bottom: -22px; 
+            font-size: 11px;
+            color: #7f8c8d;
+            font-weight: normal;
+        }
+        
+        /* המצביעים */
+        .pointer {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 55px;
+            transition: left 0.12s ease; 
+            font-weight: bold;
+            font-size: 15px;
+            top: -48px; 
+            direction: ltr;
+        }
+        .pointer-l {
+            color: #e74c3c;
+            transform: translateY(0);
+        }
+        .pointer-r {
+            color: #3498db;
+            transform: translateY(-20px); 
+        }
+        .pointer-arrow {
+            font-size: 14px;
+            line-height: 1;
+            margin-top: -1px;
+        }
+        
+        /* תוצאות ופלט */
+        .results-container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #fff;
+            border: 1px solid #dcdde1;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-top: 15px;
+        }
+        .results-title {
+            font-weight: bold;
+            border-bottom: 2px solid #f1f2f6;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .results-list {
+            max-height: 150px;
+            overflow-y: auto;
+            padding-right: 0;
+            margin: 0;
+            list-style-type: none;
+        }
+        .results-list li {
+            padding: 6px 12px;
+            background-color: #f1f2f6;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            border-right: 4px solid #2ecc71;
+            font-family: monospace;
+            font-size: 15px;
+            direction: ltr;
+            text-align: right;
+        }
+        .highlight-l {
+            background-color: #fadbd8 !important;
+            border-color: #e74c3c !important;
+        }
+        .highlight-r {
+            background-color: #d6eaf8 !important;
+            border-color: #3498db !important;
+        }
+        .highlight-both {
+            background-color: #d4efdf !important;
+            border-color: #2ecc71 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>סימולציית Two Pointers - מציאת זוגות</h1>
+
+    <div class="controls">
+        <label for="kInput">הפרש מבוקש (k): </label>
+        <input type="number" id="kInput" value="10" min="1" max="200" onkeydown="handleInputKey(event)">
+        <button onclick="generateNewArray()">הגרל מערך חדש</button>
+        <button class="reset-btn" onclick="resetSearch()">הרץ מהתחלה</button>
+    </div>
+
+    <div class="status-box" id="statusBox">
+        לחץ על "הגרל מערך חדש" או לחץ Enter מחוץ לתיבת הקלט להתחלת החיפוש.
+    </div>
+
+    <div class="visualization-container">
+        <div class="array-wrapper" id="arrayContainer">
+            <!-- המערך ייווצר כאן משמאל לימין עם ערכים בין -100 ל-100 -->
+        </div>
+    </div>
+
+    <div class="results-container">
+        <div class="results-title">זוגות שנמצאו (פלט):</div>
+        <ul class="results-list" id="resultsList">
+            <!-- תוצאות יודפסו כאן -->
+        </ul>
+    </div>
+
+    <script>
+        let a = [];
+        let l = 0;
+        let r = 1;
+        let k = 10;
+        let searchActive = false;
+        let searchFinished = false;
+
+        // פונקציית עזר לעיצוב מספר שלילי עם סוגריים בכיוון LTR תקין
+        function formatNum(num) {
+            return num < 0 ? `(${num})` : `${num}`;
+        }
+
+        function generateNewArray() {
+            const size = 20; 
+            let tempSet = new Set();
+            
+            while(tempSet.size < size) {
+                let randomNum = Math.floor(Math.random() * 201) - 100;
+                tempSet.add(randomNum);
+            }
+            
+            a = Array.from(tempSet).sort((x, y) => x - y);
+
+            updateKValue();
+            document.getElementById('resultsList').innerHTML = '';
+            
+            renderArray();
+            resetSearch();
+        }
+
+        function renderArray() {
+            const container = document.getElementById('arrayContainer');
+            container.innerHTML = '';
+            
+            a.forEach((val, idx) => {
+                const cell = document.createElement('div');
+                cell.className = 'array-cell';
+                cell.id = `cell-${idx}`;
+                cell.innerHTML = `${val}<span class="cell-index">${idx}</span>`;
+                container.appendChild(cell);
+            });
+
+            const pL = document.createElement('div');
+            pL.id = 'pointerL';
+            pL.className = 'pointer pointer-l';
+            pL.style.display = 'none';
+            pL.innerHTML = `<div>l</div><div class="pointer-arrow">▼</div>`;
+            
+            const pR = document.createElement('div');
+            pR.id = 'pointerR';
+            pR.className = 'pointer pointer-r';
+            pR.style.display = 'none';
+            pR.innerHTML = `<div>r</div><div class="pointer-arrow">▼</div>`;
+            
+            container.appendChild(pL);
+            container.appendChild(pR);
+        }
+
+        function updateKValue() {
+            const inputVal = parseInt(document.getElementById('kInput').value);
+            if (!isNaN(inputVal)) {
+                k = inputVal;
+            }
+        }
+
+        function resetSearch() {
+            l = 0;
+            r = 1;
+            updateKValue();
+            searchActive = true;
+            searchFinished = false;
+            document.getElementById('resultsList').innerHTML = '';
+            document.getElementById('statusBox').innerHTML = `הפרש k עודכן ל-<span class="math-expr">${k}</span>. לחץ <strong>Enter</strong> לביצוע צעד.`;
+            updatePointers();
+        }
+
+        function updatePointers() {
+            if (a.length === 0) return;
+
+            a.forEach((_, idx) => {
+                const cell = document.getElementById(`cell-${idx}`);
+                if(cell) cell.className = 'array-cell';
+            });
+
+            const pL = document.getElementById('pointerL');
+            const pR = document.getElementById('pointerR');
+
+            if (!pL || !pR) return;
+
+            if (r < a.length && searchActive && !searchFinished) {
+                pL.style.display = 'flex';
+                pR.style.display = 'flex';
+
+                const cellL = document.getElementById(`cell-${l}`);
+                const cellR = document.getElementById(`cell-${r}`);
+
+                if (cellL && cellR) {
+                    pL.style.left = `${cellL.offsetLeft}px`;
+                    pR.style.left = `${cellR.offsetLeft}px`;
+
+                    if (l === r) {
+                        cellL.classList.add('highlight-both');
+                    } else {
+                        cellL.classList.add('highlight-l');
+                        cellR.classList.add('highlight-r');
+                    }
+                }
+            } else {
+                pL.style.display = 'none';
+                pR.style.display = 'none';
+            }
+        }
+
+        function stepAlgorithm() {
+            if (!searchActive || searchFinished) return;
+
+            if (r >= a.length) {
+                document.getElementById('statusBox').innerHTML = `<strong style="color: #c0392b; font-size: 18px;">החיפוש הסתיים! סיימנו לעבור על המערך (<span class="math-expr">r = ${r}</span>).</strong>`;
+                searchFinished = true;
+                updatePointers();
+                return;
+            }
+
+            let diff = a[r] - a[l];
+            let actionText = "";
+            let valR = formatNum(a[r]);
+            let valL = formatNum(a[l]);
+
+            if (diff > k) {
+                actionText = `ההפרש: <span class="math-expr">${valR} - ${valL} = ${diff} &gt; ${k}</span>. מבוצע: <strong class="math-expr">l++</strong>`;
+                l++;
+            } 
+            else if (diff < k) {
+                actionText = `ההפרש: <span class="math-expr">${valR} - ${valL} = ${diff} &lt; ${k}</span>. מבוצע: <strong class="math-expr">r++</strong>`;
+                r++;
+            } 
+            else {
+                actionText = `<strong>נמצא זוג!</strong> <span class="math-expr">${valR} - ${valL} = ${diff} == ${k}</span>. מבוצע: <strong class="math-expr">l++, r++</strong>`;
+                
+                const list = document.getElementById('resultsList');
+                const li = document.createElement('li');
+                li.textContent = `Pair Found: (${a[l]}, ${a[r]})`;
+                list.appendChild(li);
+                
+                l++;
+                r++;
+            }
+
+            if (r === l) {
+                actionText += ` <br><span style="color:#e67e22;">תיקון: <span class="math-expr">r == l (${r})</span>, מבוצע <span class="math-expr">r++</span> למניעת כפל איבר.</span>`;
+                r++;
+            }
+
+            document.getElementById('statusBox').innerHTML = actionText;
+            
+            if (r >= a.length) {
+                document.getElementById('statusBox').innerHTML = `<strong style="color: #c0392b; font-size: 18px;">החיפוש הסתיים! סיימנו לעבור על המערך (<span class="math-expr">r = ${r}</span>).</strong>`;
+                searchFinished = true;
+            }
+
+            updatePointers();
+        }
+
+        function handleInputKey(event) {
+            if (event.key === 'Enter') {
+                event.stopPropagation(); 
+                updateKValue();
+                document.getElementById('statusBox').innerHTML = `הערך k עודכן בהצלחה ל-<span class="math-expr">${k}</span>!`;
+                document.getElementById('kInput').blur(); 
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                if (document.activeElement === document.getElementById('kInput')) {
+                    return;
+                }
+                event.preventDefault();
+                
+                if (searchFinished) {
+                    document.getElementById('statusBox').innerHTML = `<strong style="color: #c0392b; font-size: 18px;">החיפוש כבר הסתיים! לחץ על "הרץ מהתחלה" או "הגרל מערך חדש".</strong>`;
+                    return;
+                }
+                
+                stepAlgorithm();
+            }
+        });
+
+        window.onload = function() {
+            generateNewArray();
+        };
+    </script>
+</body>
+</html>
